@@ -1,4 +1,5 @@
-import { TrendingUp } from 'lucide-react';
+import { Link } from '@inertiajs/react';
+import { ChevronRight, TrendingUp } from 'lucide-react';
 import React from 'react';
 
 interface StatsCardProps {
@@ -8,9 +9,10 @@ interface StatsCardProps {
     changeText?: string;
     changeType?: 'increase' | 'decrease' | 'neutral';
     className?: string;
+    defaultUrl?: string;
 }
 
-export const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon, changeText, changeType = 'neutral', className = '' }) => {
+export const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon, changeText, changeType = 'neutral', className = '', defaultUrl }) => {
     const getChangeColor = () => {
         switch (changeType) {
             case 'increase':
@@ -31,8 +33,32 @@ export const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon, change
         return null;
     };
 
+    if (defaultUrl) {
+        return (
+            <Link href={defaultUrl} className="block">
+                <div className="group relative rounded-lg bg-white p-4 shadow transition-shadow hover:shadow-md">
+                    <div className="flex justify-between">
+                        <div>
+                            <p className="text-sm text-gray-500">{title}</p>
+                            <p className="text-2xl font-bold">{typeof value === 'number' ? value.toLocaleString() : value}</p>
+                        </div>
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-100">{icon}</div>
+                    </div>
+                    {changeText && (
+                        <div className={`mt-2 flex items-center text-xs ${getChangeColor()}`}>
+                            <span>{changeText}</span>
+                        </div>
+                    )}
+
+                    <div className="absolute right-2 bottom-4 opacity-0 transition-opacity group-hover:opacity-100">
+                        <ChevronRight className="h-5 w-5 text-green-500" />
+                    </div>
+                </div>
+            </Link>
+        );
+    }
     return (
-        <div className={`rounded-lg bg-white p-4 shadow ${className}`}>
+        <div className="rounded-lg bg-white p-4 shadow">
             <div className="flex justify-between">
                 <div>
                     <p className="text-sm text-gray-500">{title}</p>
@@ -42,7 +68,6 @@ export const StatsCard: React.FC<StatsCardProps> = ({ title, value, icon, change
             </div>
             {changeText && (
                 <div className={`mt-2 flex items-center text-xs ${getChangeColor()}`}>
-                    {getChangeIcon()}
                     <span>{changeText}</span>
                 </div>
             )}

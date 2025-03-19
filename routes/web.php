@@ -1,5 +1,8 @@
 <?php
 
+use App\Http\Controllers\AcademicDataController;
+use App\Http\Controllers\LocationController;
+use App\Http\Controllers\StudentController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -11,6 +14,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', function () {
         return Inertia::render('dashboard');
     })->name('dashboard');
+
+    Route::get("/location", [LocationController::class, 'index'])->name("location.index");
+
+    Route::prefix("dashboard/students")->group(function () {
+        Route::get("/", [StudentController::class, "index"])->name("student.index");
+    });
+
+    Route::prefix("academic")->group(function () {
+        Route::get("/", [AcademicDataController::class, "index"])->name("academic.index");
+    });
+
 });
 
 require __DIR__.'/settings.php';
