@@ -2,13 +2,79 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\AverageGpaService;
+use App\Services\StudentService;
+use App\Services\TermService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class AcademicDataController extends Controller
 {
-    public function index()
+
+    protected StudentService $studentService;
+    protected AverageGpaService $averageGpaService;
+    protected TermService $termService;
+
+    public function __construct(
+        StudentService $studentService, 
+        AverageGpaService $averageGpaService,
+        TermService $termService
+    ) {
+        $this->studentService = $studentService;
+        $this->averageGpaService = $averageGpaService;
+        $this->termService = $termService;
+    }
+
+    public function index(Request $request)
     {
-        return Inertia::render("academic/index");
+        // Ambil term_year_id dari request
+        $termYearId = $request->input('term_year_id');
+        
+        $currentTerm = $this->termService->getCurrentTerm($termYearId);
+        $availableTerms = $this->termService->getAvailableTerms();
+        
+        $avgGpa = $this->averageGpaService->getAverageGpaByTerm($currentTerm['id']);
+        
+        
+        // Gabungkan data statistik
+        $stats = [
+            'activeStudents' => $this->studentService->getActiveStudentsCount(),
+            'avgGpa' => $avgGpa,
+            'graduationRate' => [
+                'value' => '82%',
+                'trend' => [
+                    'value' => '5% dari tahun lalu',
+                    'type' => 'up'
+                ]
+            ],
+            'facultyRatio' => [
+                'value' => '1:15',
+                'trend' => [
+                    'value' => 'Ideal menurut standar BAN-PT',
+                    'type' => 'neutral'
+                ]
+            ],
+            'problemStudents' => [
+                'total' => '346',
+                'trend' => [
+                    'value' => '2.8% dari total mahasiswa',
+                    'type' => 'down'
+                ]
+            ]
+        ];
+
+
+        return Inertia::render("academic/index", [
+            'stats' => $stats,
+            'filters' => [
+                'currentTerm' => $currentTerm,
+                'availableTerms' => $availableTerms
+            ]
+        ]);
+    }
+
+    public function student()
+    {
+        return Inertia::render("academic/student/index");
     }
 }

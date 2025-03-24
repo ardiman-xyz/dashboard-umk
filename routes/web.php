@@ -21,8 +21,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get("/", [StudentController::class, "index"])->name("student.index");
     });
 
-    Route::prefix("academic")->group(function () {
-        Route::get("/", [AcademicDataController::class, "index"])->name("academic.index");
+    Route::prefix("academic")->name("academic.")->group(function () {
+        Route::get("/", [AcademicDataController::class, "index"])->name("index");
+        Route::get("students", [AcademicDataController::class, "student"])->name("student.index");
     });
 
 });

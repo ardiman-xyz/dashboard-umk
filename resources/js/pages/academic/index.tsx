@@ -1,5 +1,6 @@
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
+import { AcademicStats } from '@/types/academic';
 import { Head } from '@inertiajs/react';
 import { AkademikFilter } from './_components/AkademikFilter';
 import { AkademikHeader } from './_components/AkademikHeader';
@@ -17,7 +18,13 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-export default function Akademik() {
+interface AkademikProps {
+    stats: AcademicStats;
+}
+
+export default function Akademik({ stats }: AkademikProps) {
+    console.info(stats);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Akademik" />
@@ -28,7 +35,7 @@ export default function Akademik() {
                     <AkademikFilter />
                 </div>
 
-                <StatCards />
+                <StatCards stats={stats} />
                 <DataCharts />
             </div>
         </AppLayout>
