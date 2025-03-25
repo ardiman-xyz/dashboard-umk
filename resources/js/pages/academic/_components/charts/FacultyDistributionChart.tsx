@@ -1,18 +1,34 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip } from '@/components/ui/chart';
-import { TrendingUp } from 'lucide-react';
+import { PageProps } from '@inertiajs/core';
+import { usePage } from '@inertiajs/react';
+import { TrendingDown, TrendingUp } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 
-const chartData = [
-    { faculty: 'Teknik', current: 1845, previous: 1720 },
-    { faculty: 'Pertanian', current: 1576, previous: 1450 },
-    { faculty: 'Perikanan', current: 1234, previous: 1150 },
-    { faculty: 'Ilmu Sosial', current: 1368, previous: 1300 },
-    { faculty: 'Hukum', current: 993, previous: 940 },
-    { faculty: 'Ekonomi', current: 1742, previous: 1650 },
-    { faculty: 'Keguruan', current: 2140, previous: 2050 },
-    { faculty: 'Agama Islam', current: 1560, previous: 1480 },
-];
+interface FacultyData {
+    faculty: string;
+    faculty_id: string | number;
+    current: number;
+    previous: number;
+    percent_change: number;
+}
+
+interface FacultyDistribution {
+    total_current: number;
+    total_previous: number;
+    percent_change: number;
+    distribution: FacultyData[];
+}
+
+interface AcademicStatsProps {
+    facultyDistribution: FacultyDistribution;
+    [key: string]: any;
+}
+
+interface PagePropsWithStats extends PageProps {
+    stats: AcademicStatsProps;
+}
 
 const chartConfig = {
     current: {
@@ -26,10 +42,44 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function FacultyDistributionChart() {
-    // Menghitung total dan persentase perubahan
-    const totalCurrent = chartData.reduce((sum, item) => sum + item.current, 0);
-    const totalPrevious = chartData.reduce((sum, item) => sum + item.previous, 0);
-    const percentChange = (((totalCurrent - totalPrevious) / totalPrevious) * 100).toFixed(1);
+    const { stats } = usePage<PagePropsWithStats>().props;
+    const [chartData, setChartData] = useState<FacultyData[]>([]);
+    const [totalCurrent, setTotalCurrent] = useState<number>(0);
+    const [totalPrevious, setTotalPrevious] = useState<number>(0);
+    const [percentChange, setPercentChange] = useState<number>(0);
+
+    useEffect(() => {
+        // Jika data tersedia dari props, gunakan itu
+        if (stats?.facultyDistribution?.distribution) {
+            setChartData(stats.facultyDistribution.distribution);
+            setTotalCurrent(stats.facultyDistribution.total_current);
+            setTotalPrevious(stats.facultyDistribution.total_previous);
+            setPercentChange(stats.facultyDistribution.percent_change);
+        } else {
+            // Data dummy jika data tidak tersedia
+            const dummyData = [
+                { faculty: 'Teknik', faculty_id: 1, current: 1845, previous: 1720, percent_change: 7.3 },
+                { faculty: 'Pertanian', faculty_id: 2, current: 1576, previous: 1450, percent_change: 8.7 },
+                { faculty: 'Perikanan', faculty_id: 3, current: 1234, previous: 1150, percent_change: 7.3 },
+                { faculty: 'Ilmu Sosial', faculty_id: 4, current: 1368, previous: 1300, percent_change: 5.2 },
+                { faculty: 'Hukum', faculty_id: 5, current: 993, previous: 940, percent_change: 5.6 },
+                { faculty: 'Ekonomi', faculty_id: 6, current: 1742, previous: 1650, percent_change: 5.6 },
+                { faculty: 'Keguruan', faculty_id: 7, current: 2140, previous: 2050, percent_change: 4.4 },
+                { faculty: 'Agama Islam', faculty_id: 8, current: 1560, previous: 1480, percent_change: 5.4 },
+            ];
+
+            setChartData(dummyData);
+
+            // Hitung total dan persentase perubahan
+            const dummyTotalCurrent = dummyData.reduce((sum, item) => sum + item.current, 0);
+            const dummyTotalPrevious = dummyData.reduce((sum, item) => sum + item.previous, 0);
+            const dummyPercentChange = ((dummyTotalCurrent - dummyTotalPrevious) / dummyTotalPrevious) * 100;
+
+            setTotalCurrent(dummyTotalCurrent);
+            setTotalPrevious(dummyTotalPrevious);
+            setPercentChange(parseFloat(dummyPercentChange.toFixed(1)));
+        }
+    }, [stats]);
 
     return (
         <Card>
@@ -47,8 +97,8 @@ export function FacultyDistributionChart() {
                             cursor={false}
                             content={(props) => {
                                 if (props?.payload && props.payload.length > 0) {
-                                    const data = props.payload[0].payload;
-                                    const yearChange = (((data.current - data.previous) / data.previous) * 100).toFixed(1);
+                                    const data = props.payload[0].payload as FacultyData;
+                                    const yearChange = data.percent_change;
 
                                     return (
                                         <div className="border-border bg-background rounded-lg border p-2 shadow-md">
@@ -60,7 +110,7 @@ export function FacultyDistributionChart() {
                                                 Tahun Lalu: <span className="font-medium">{data.previous}</span> mahasiswa
                                             </div>
                                             <div className="text-muted-foreground text-xs">
-                                                {Number(yearChange) >= 0 ? 'Naik' : 'Turun'} {Math.abs(Number(yearChange))}% dari tahun lalu
+                                                {yearChange >= 0 ? 'Naik' : 'Turun'} {Math.abs(yearChange)}% dari tahun lalu
                                             </div>
                                         </div>
                                     );
@@ -75,7 +125,15 @@ export function FacultyDistributionChart() {
             </CardContent>
             <CardFooter className="flex-col items-start gap-2 text-sm">
                 <div className="flex gap-2 leading-none font-medium">
-                    Meningkat {percentChange}% dari tahun lalu <TrendingUp className="h-4 w-4" />
+                    {percentChange >= 0 ? (
+                        <>
+                            Meningkat {percentChange}% dari tahun lalu <TrendingUp className="h-4 w-4 text-green-500" />
+                        </>
+                    ) : (
+                        <>
+                            Menurun {Math.abs(percentChange)}% dari tahun lalu <TrendingDown className="h-4 w-4 text-red-500" />
+                        </>
+                    )}
                 </div>
                 <div className="text-muted-foreground leading-none">Total {totalCurrent.toLocaleString()} mahasiswa tahun ini</div>
             </CardFooter>

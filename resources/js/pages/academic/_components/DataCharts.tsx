@@ -10,7 +10,6 @@ import { TopStudentsTable } from './charts/TopStudentsTable';
 export function DataCharts() {
     return (
         <div className="space-y-6">
-            {/* Tabs untuk kategori data */}
             <Tabs defaultValue="demografi" className="w-full">
                 <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="demografi">Demografi</TabsTrigger>
@@ -19,7 +18,6 @@ export function DataCharts() {
                     <TabsTrigger value="prestasi">Prestasi</TabsTrigger>
                 </TabsList>
 
-                {/* Tab Demografi */}
                 <TabsContent value="demografi" className="pt-4">
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <FacultyDistributionChart />
@@ -27,7 +25,6 @@ export function DataCharts() {
                     </div>
                 </TabsContent>
 
-                {/* Tab Performa Akademik */}
                 <TabsContent value="performa" className="pt-4">
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <GpaTrendChart />
@@ -35,7 +32,6 @@ export function DataCharts() {
                     </div>
                 </TabsContent>
 
-                {/* Tab Kehadiran */}
                 <TabsContent value="kehadiran" className="pt-4">
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                         <AttendanceMonthlyChart />
@@ -43,7 +39,6 @@ export function DataCharts() {
                     </div>
                 </TabsContent>
 
-                {/* Tab Prestasi */}
                 <TabsContent value="prestasi" className="pt-4">
                     <div className="grid grid-cols-1 gap-4">
                         <TopStudentsTable />
@@ -51,11 +46,7 @@ export function DataCharts() {
                 </TabsContent>
             </Tabs>
 
-            {/* Bagian Tambahan */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                {/* <ScholarshipChart />
-        <AcademicCalendar /> */}
-            </div>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2"></div>
         </div>
     );
 }

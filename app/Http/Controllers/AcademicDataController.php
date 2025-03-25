@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\AverageGpaService;
+use App\Services\FacultyDistributionService;
 use App\Services\StudentService;
 use App\Services\TermService;
 use Illuminate\Http\Request;
@@ -14,15 +15,18 @@ class AcademicDataController extends Controller
     protected StudentService $studentService;
     protected AverageGpaService $averageGpaService;
     protected TermService $termService;
+    protected FacultyDistributionService $facultyDistributionService;
 
     public function __construct(
         StudentService $studentService, 
         AverageGpaService $averageGpaService,
-        TermService $termService
+        TermService $termService,
+        FacultyDistributionService $facultyDistributionService
     ) {
         $this->studentService = $studentService;
         $this->averageGpaService = $averageGpaService;
         $this->termService = $termService;
+        $this->facultyDistributionService = $facultyDistributionService;
     }
 
     public function index(Request $request)
@@ -34,7 +38,11 @@ class AcademicDataController extends Controller
         $availableTerms = $this->termService->getAvailableTerms();
         
         $avgGpa = $this->averageGpaService->getAverageGpaByTerm($currentTerm['id']);
-        
+
+           // Ambil data distribusi fakultas
+        $facultyDistribution = $this->facultyDistributionService->getFacultyDistributionSummary($currentTerm['id']);
+
+
         
         // Gabungkan data statistik
         $stats = [
@@ -60,7 +68,8 @@ class AcademicDataController extends Controller
                     'value' => '2.8% dari total mahasiswa',
                     'type' => 'down'
                 ]
-            ]
+                ],
+            'facultyDistribution' => $facultyDistribution
         ];
 
 
