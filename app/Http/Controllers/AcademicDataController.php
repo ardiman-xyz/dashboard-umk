@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Services\AverageGpaService;
 use App\Services\FacultyDistributionService;
+use App\Services\GpaTrendService;
 use App\Services\StudentService;
 use App\Services\TermService;
 use Illuminate\Http\Request;
@@ -16,17 +17,20 @@ class AcademicDataController extends Controller
     protected AverageGpaService $averageGpaService;
     protected TermService $termService;
     protected FacultyDistributionService $facultyDistributionService;
+    protected GpaTrendService $gpaTrendService;
 
     public function __construct(
         StudentService $studentService, 
         AverageGpaService $averageGpaService,
         TermService $termService,
-        FacultyDistributionService $facultyDistributionService
+        FacultyDistributionService $facultyDistributionService,
+        GpaTrendService $gpaTrendService
     ) {
         $this->studentService = $studentService;
         $this->averageGpaService = $averageGpaService;
         $this->termService = $termService;
         $this->facultyDistributionService = $facultyDistributionService;
+        $this->gpaTrendService = $gpaTrendService;
     }
 
     public function index(Request $request)
@@ -42,9 +46,9 @@ class AcademicDataController extends Controller
            // Ambil data distribusi fakultas
         $facultyDistribution = $this->facultyDistributionService->getFacultyDistributionSummary($currentTerm['id']);
 
+        $gpaTrend = $this->gpaTrendService->getGpaTrendSummary(10, $currentTerm['id']);
 
         
-        // Gabungkan data statistik
         $stats = [
             'activeStudents' => $this->studentService->getActiveStudentsCount(),
             'avgGpa' => $avgGpa,
@@ -69,7 +73,8 @@ class AcademicDataController extends Controller
                     'type' => 'down'
                 ]
                 ],
-            'facultyDistribution' => $facultyDistribution
+            'facultyDistribution' => $facultyDistribution,
+            'gpaTrend' => $gpaTrend
         ];
 
 

@@ -1,24 +1,48 @@
-// types/stats.ts
+// types/academic.ts
 
 export interface TrendData {
     value: string;
     type: 'up' | 'down' | 'neutral';
 }
 
-export interface AverageGpaData {
-    value: string;
-    trend: TrendData;
-    term_info?: string; // Informasi semester, misalnya "Genap 2023/2024"
-}
-
-export interface TermInfo {
-    id: string;
-    name: string;
-}
-
 export interface ActiveStudentsData {
     total: string;
     trend: TrendData;
+}
+
+export interface AverageGpaData {
+    value: string;
+    trend: TrendData;
+    term_info?: string;
+}
+
+export interface FacultyData {
+    faculty: string;
+    faculty_id: string | number;
+    current: number;
+    previous: number;
+    percent_change: number;
+}
+
+export interface FacultyDistribution {
+    total_current: number;
+    total_previous: number;
+    percent_change: number;
+    distribution: FacultyData[];
+}
+
+export interface GpaDataPoint {
+    semester: string;
+    ipk: number;
+    label: string;
+}
+
+export interface GpaTrendData {
+    trend_data: GpaDataPoint[];
+    first_ipk: number;
+    last_ipk: number;
+    percent_change: number;
+    years_count: number;
 }
 
 export interface AcademicStats {
@@ -36,10 +60,6 @@ export interface AcademicStats {
         total: string;
         trend: TrendData;
     };
-}
-
-export interface AcademicPageProps {
-    stats: AcademicStats;
-    currentTerm?: TermInfo;
-    availableTerms?: TermInfo[]; // Untuk dropdown pemilihan semester
+    facultyDistribution?: FacultyDistribution;
+    gpaTrend?: GpaTrendData;
 }

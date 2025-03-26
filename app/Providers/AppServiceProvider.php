@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Services\AverageGpaService;
 use App\Services\FacultyDistributionService;
+use App\Services\GpaTrendService;
 use App\Services\StudentService;
 use App\Services\TermService;
 use Illuminate\Support\ServiceProvider;
@@ -29,6 +30,10 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(FacultyDistributionService::class, function ($app) {
             return new FacultyDistributionService();
+        });
+
+        $this->app->singleton(GpaTrendService::class, function ($app) {
+            return new GpaTrendService();
         });
     }
 

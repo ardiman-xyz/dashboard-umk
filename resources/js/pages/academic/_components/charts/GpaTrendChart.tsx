@@ -1,22 +1,14 @@
-'use client';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip } from '@/components/ui/chart';
-import { TrendingUp } from 'lucide-react';
+import { type AcademicStats } from '@/types/academic';
+import { PageProps } from '@inertiajs/core';
+import { usePage } from '@inertiajs/react';
+import { TrendingDown, TrendingUp } from 'lucide-react';
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts';
 
-// Data IPK per semester selama 5 tahun terakhir (10 semester)
-const chartData = [
-    { semester: '2020-1', ipk: 3.21, label: 'Ganjil 2020' },
-    { semester: '2020-2', ipk: 3.25, label: 'Genap 2020' },
-    { semester: '2021-1', ipk: 3.28, label: 'Ganjil 2021' },
-    { semester: '2021-2', ipk: 3.3, label: 'Genap 2021' },
-    { semester: '2022-1', ipk: 3.34, label: 'Ganjil 2022' },
-    { semester: '2022-2', ipk: 3.37, label: 'Genap 2022' },
-    { semester: '2023-1', ipk: 3.35, label: 'Ganjil 2023' },
-    { semester: '2023-2', ipk: 3.38, label: 'Genap 2023' },
-    { semester: '2024-1', ipk: 3.41, label: 'Ganjil 2024' },
-    { semester: '2024-2', ipk: 3.42, label: 'Genap 2024' },
-];
+interface PagePropsWithStats extends PageProps {
+    stats: AcademicStats;
+}
 
 const chartConfig = {
     ipk: {
@@ -26,21 +18,46 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export function GpaTrendChart() {
-    // Hitung perubahan persentase dari semester pertama hingga terakhir
-    const firstIPK = chartData[0].ipk;
-    const lastIPK = chartData[chartData.length - 1].ipk;
-    const percentChange = (((lastIPK - firstIPK) / firstIPK) * 100).toFixed(1);
+    const { stats } = usePage<PagePropsWithStats>().props;
+
+    // Pastikan stats.gpaTrend.trend_data tersedia, jika tidak gunakan data dummy
+    const gpaTrendData = stats?.gpaTrend?.trend_data || [
+        { semester: '2020-1', ipk: 3.21, label: 'Ganjil 2020' },
+        { semester: '2020-2', ipk: 3.25, label: 'Genap 2020' },
+        { semester: '2021-1', ipk: 3.28, label: 'Ganjil 2021' },
+        { semester: '2021-2', ipk: 3.3, label: 'Genap 2021' },
+        { semester: '2022-1', ipk: 3.34, label: 'Ganjil 2022' },
+        { semester: '2022-2', ipk: 3.37, label: 'Genap 2022' },
+        { semester: '2023-1', ipk: 3.35, label: 'Ganjil 2023' },
+        { semester: '2023-2', ipk: 3.38, label: 'Genap 2023' },
+        { semester: '2024-1', ipk: 3.41, label: 'Ganjil 2024' },
+        { semester: '2024-2', ipk: 3.42, label: 'Genap 2024' },
+    ];
+
+    // Gunakan nilai dari API jika tersedia
+    const firstIPK = stats?.gpaTrend?.first_ipk || gpaTrendData[0].ipk;
+    const lastIPK = stats?.gpaTrend?.last_ipk || gpaTrendData[gpaTrendData.length - 1].ipk;
+    const percentChange =
+        stats?.gpaTrend?.percent_change !== undefined
+            ? stats.gpaTrend.percent_change
+            : parseFloat((((lastIPK - firstIPK) / firstIPK) * 100).toFixed(1));
+
+    const yearsCount = stats?.gpaTrend?.years_count || 5;
+
+    // Hitung domain untuk Y-axis (min dan max IPK +/- margin)
+    const minIpk = Math.max(2.0, Math.min(...gpaTrendData.map((d) => d.ipk)) - 0.1);
+    const maxIpk = Math.min(4.0, Math.max(...gpaTrendData.map((d) => d.ipk)) + 0.1);
 
     return (
         <Card>
             <CardHeader className="pb-2">
-                <CardTitle className="text-base">Tren IPK 5 Tahun Terakhir</CardTitle>
+                <CardTitle className="text-base">Tren IPK {yearsCount} Tahun Terakhir</CardTitle>
                 <CardDescription className="text-xs">Rata-rata IPK per semester</CardDescription>
             </CardHeader>
             <CardContent>
                 <ChartContainer config={chartConfig}>
                     <LineChart
-                        data={chartData}
+                        data={gpaTrendData}
                         margin={{
                             top: 10,
                             right: 10,
@@ -56,7 +73,13 @@ export function GpaTrendChart() {
                             tickMargin={8}
                             tickFormatter={(value) => value.split('-')[0].slice(2) + (value.endsWith('1') ? '.1' : '.2')}
                         />
-                        <YAxis domain={[3.0, 3.5]} tickCount={6} tickLine={false} axisLine={false} tickFormatter={(value) => value.toFixed(1)} />
+                        <YAxis
+                            domain={[minIpk, maxIpk]}
+                            tickCount={6}
+                            tickLine={false}
+                            axisLine={false}
+                            tickFormatter={(value) => value.toFixed(1)}
+                        />
                         <ChartTooltip
                             cursor={{ strokeDasharray: '3 3' }}
                             content={(props) => {
@@ -80,7 +103,15 @@ export function GpaTrendChart() {
             </CardContent>
             <CardFooter className="flex-col items-start gap-2 pt-2 text-sm">
                 <div className="flex gap-2 leading-none font-medium">
-                    Meningkat {percentChange}% dalam 5 tahun terakhir <TrendingUp className="h-4 w-4" />
+                    {percentChange >= 0 ? (
+                        <>
+                            Meningkat {percentChange}% dalam {yearsCount} tahun terakhir <TrendingUp className="h-4 w-4 text-green-500" />
+                        </>
+                    ) : (
+                        <>
+                            Menurun {Math.abs(percentChange)}% dalam {yearsCount} tahun terakhir <TrendingDown className="h-4 w-4 text-red-500" />
+                        </>
+                    )}
                 </div>
                 <div className="text-muted-foreground leading-none">IPK semester terakhir: {lastIPK.toFixed(2)}</div>
             </CardFooter>
