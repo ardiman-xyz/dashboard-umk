@@ -45,6 +45,24 @@ export interface GpaTrendData {
     years_count: number;
 }
 
+export interface GradeData {
+    grade: string;
+    count: number;
+    percentage: number;
+    color: string;
+}
+
+export interface GradeDistributionCategory {
+    data: GradeData[];
+    total_count: number;
+    good_grade_percentage: number;
+}
+
+export interface GradeDistributionData {
+    letter_grade: GradeDistributionCategory;
+    detail_grade: GradeDistributionCategory;
+}
+
 export interface AcademicStats {
     activeStudents: ActiveStudentsData;
     avgGpa: AverageGpaData;
@@ -62,4 +80,5 @@ export interface AcademicStats {
     };
     facultyDistribution?: FacultyDistribution;
     gpaTrend?: GpaTrendData;
+    gradeDistribution?: GradeDistributionData;
 }

@@ -23,8 +23,6 @@ interface AkademikProps {
 }
 
 export default function Akademik({ stats }: AkademikProps) {
-    console.info(stats);
-
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Akademik" />

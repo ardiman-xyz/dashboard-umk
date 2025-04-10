@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Services\AverageGpaService;
 use App\Services\FacultyDistributionService;
 use App\Services\GpaTrendService;
+use App\Services\GradeDistributionService;
 use App\Services\StudentService;
 use App\Services\TermService;
 use Illuminate\Http\Request;
@@ -18,19 +19,22 @@ class AcademicDataController extends Controller
     protected TermService $termService;
     protected FacultyDistributionService $facultyDistributionService;
     protected GpaTrendService $gpaTrendService;
+    protected GradeDistributionService $gradeDistributionService;
 
     public function __construct(
         StudentService $studentService, 
         AverageGpaService $averageGpaService,
         TermService $termService,
         FacultyDistributionService $facultyDistributionService,
-        GpaTrendService $gpaTrendService
+        GpaTrendService $gpaTrendService,
+        GradeDistributionService $gradeDistributionService
     ) {
         $this->studentService = $studentService;
         $this->averageGpaService = $averageGpaService;
         $this->termService = $termService;
         $this->facultyDistributionService = $facultyDistributionService;
         $this->gpaTrendService = $gpaTrendService;
+        $this->gradeDistributionService = $gradeDistributionService;
     }
 
     public function index(Request $request)
@@ -43,10 +47,10 @@ class AcademicDataController extends Controller
         
         $avgGpa = $this->averageGpaService->getAverageGpaByTerm($currentTerm['id']);
 
-           // Ambil data distribusi fakultas
         $facultyDistribution = $this->facultyDistributionService->getFacultyDistributionSummary($currentTerm['id']);
 
         $gpaTrend = $this->gpaTrendService->getGpaTrendSummary(10, $currentTerm['id']);
+        $gradeDistribution = $this->gradeDistributionService->getGradeDistributionSummary($currentTerm['id']);
 
         
         $stats = [
@@ -72,9 +76,10 @@ class AcademicDataController extends Controller
                     'value' => '2.8% dari total mahasiswa',
                     'type' => 'down'
                 ]
-                ],
+            ],
             'facultyDistribution' => $facultyDistribution,
-            'gpaTrend' => $gpaTrend
+            'gpaTrend' => $gpaTrend,
+            'gradeDistribution' => $gradeDistribution
         ];
 
 
