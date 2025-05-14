@@ -3,7 +3,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { AcademicStats } from '@/types/academic';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import { router, usePage } from '@inertiajs/react';
-import { AlertTriangle, Award, BookOpen, ChevronRight, GraduationCap, TrendingDown, TrendingUp, Users } from 'lucide-react';
+import { BookOpen, ChevronRight, GraduationCap, TrendingDown, TrendingUp, Users } from 'lucide-react';
 import React from 'react';
 
 interface StatCardProps {
@@ -95,49 +95,50 @@ export function StatCards({ stats, currentTerm }: StatCardsProps) {
         {
             title: 'Rata-rata IPK',
             value: stats.avgGpa.value,
-            description: 'Indeks Prestasi Kumulatif',
+            description: isAllFilter ? 'IPK rata-rata seluruh mahasiswa' : 'Indeks Prestasi Kumulatif',
             icon: <BookOpen className="h-5 w-5" />,
             detailPath: route('academic.student.index'),
-            trend: stats.avgGpa.trend,
+            trend: isAllFilter
+                ? stats.avgGpa.good_gpa_percentage
+                    ? {
+                          value: `${stats.avgGpa.good_gpa_percentage}% mahasiswa IPK ≥ 3.0`,
+                          type: 'neutral' as const,
+                      }
+                    : null
+                : stats.avgGpa.trend,
             termInfo: stats.avgGpa.term_info || (isAllFilter ? undefined : effectiveCurrentTerm?.name),
         },
-        {
-            title: 'Tingkat Kelulusan Tepat Waktu',
-            value: stats.graduationRate?.value || '82%',
-            description: 'Mahasiswa lulus tepat waktu',
-            icon: <Award className="h-5 w-5" />,
-            detailPath: route('academic.student.index'),
-            trend: stats.graduationRate?.trend || {
-                value: '5% dari tahun lalu',
-                type: 'up' as const,
-            },
-        },
+
         {
             title: 'Rasio Dosen-Mahasiswa',
-            value: stats.facultyRatio?.value || '1:15',
-            description: 'Perbandingan jumlah dosen & mahasiswa',
+            value: stats.lecturerRatio.value,
+            description: isAllFilter
+                ? `Total ${stats.lecturerRatio.lecturer_count} dosen & ${stats.lecturerRatio.student_count} mahasiswa`
+                : `${stats.lecturerRatio.lecturer_count} dosen & ${stats.lecturerRatio.student_count} mahasiswa`,
             icon: <GraduationCap className="h-5 w-5" />,
             detailPath: route('academic.student.index'),
-            trend: stats.facultyRatio?.trend || {
-                value: 'Ideal menurut standar BAN-PT',
-                type: 'neutral' as const,
-            },
+            trend: stats.lecturerRatio.trend,
+            termInfo:
+                isAllFilter && stats.lecturerRatio.additional_info
+                    ? stats.lecturerRatio.additional_info
+                    : isAllFilter
+                      ? undefined
+                      : effectiveCurrentTerm?.name,
         },
         {
-            title: 'Mahasiswa Bermasalah Akademik',
-            value: stats.problemStudents?.total || '346',
-            description: 'Perlu perhatian khusus',
-            icon: <AlertTriangle className="h-5 w-5" />,
+            title: 'Jumlah Dosen',
+            value: stats.lecturerCount.total,
+            description: 'Total dosen aktif',
+            icon: <GraduationCap className="h-5 w-5" />,
             detailPath: route('academic.student.index'),
-            trend: stats.problemStudents?.trend || {
-                value: '2.8% dari total mahasiswa',
-                type: 'down' as const,
-            },
+            trend: null, // Tidak menampilkan trend
+            termInfo: stats.lecturerCount.additional_info,
+            showTrend: false, // Tidak perlu menampilkan trend area
         },
     ];
 
     return (
-        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-3 lg:grid-cols-5">
+        <div className="mb-6 grid grid-cols-1 gap-4 md:grid-cols-4 lg:grid-cols-4">
             {cardData.map((card, index) => (
                 <StatCard
                     key={index}

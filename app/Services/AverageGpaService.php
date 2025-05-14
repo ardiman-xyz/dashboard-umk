@@ -7,21 +7,104 @@ use Illuminate\Support\Facades\Cache;
 
 class AverageGpaService
 {
-    /**
-     * Mendapatkan data rata-rata IPK mahasiswa (dummy)
+   /**
+     * Mendapatkan data rata-rata IPK mahasiswa untuk semua semester
      * 
      * @return array Data statistik IPK mahasiswa
      */
     public function getAverageGpa()
     {
-        // Data dummy untuk rata-rata IPK
-        return [
-            'value' => '3.42',
-            'trend' => [
-                'value' => '0.1 dari semester lalu',
-                'type' => 'up'
-            ]
-        ];
+        return Cache::remember('average-gpa-all', 3600, function () {
+            // Ambil data IPK rata-rata dari semua semester
+            $allGpaData = DB::table('acd_student_khs')
+                ->join('acd_student_krs', 'acd_student_khs.Krs_Id', '=', 'acd_student_krs.Krs_Id')
+                ->where('acd_student_khs.Is_For_Transkrip', '1')
+                ->where('acd_student_krs.Is_Approved', '1')
+                ->select(
+                    'acd_student_khs.Weight_Value',
+                    'acd_student_krs.Sks',
+                    'acd_student_krs.Student_Id',
+                    'acd_student_krs.Term_Year_Id'
+                )
+                ->get();
+            
+            // Hitung IPK rata-rata keseluruhan dengan menghitung per mahasiswa terlebih dahulu
+            $studentGpas = [];
+            
+            foreach ($allGpaData as $item) {
+                $studentId = $item->Student_Id;
+                
+                if (!isset($studentGpas[$studentId])) {
+                    $studentGpas[$studentId] = [
+                        'totalWeightedGpa' => 0,
+                        'totalSks' => 0
+                    ];
+                }
+                
+                $studentGpas[$studentId]['totalWeightedGpa'] += ($item->Weight_Value * $item->Sks);
+                $studentGpas[$studentId]['totalSks'] += $item->Sks;
+            }
+            
+            // Hitung IPK rata-rata per mahasiswa
+            $totalStudentGpa = 0;
+            $studentCount = 0;
+            
+            foreach ($studentGpas as $studentGpa) {
+                if ($studentGpa['totalSks'] > 0) {
+                    $studentAvgGpa = $studentGpa['totalWeightedGpa'] / $studentGpa['totalSks'];
+                    $totalStudentGpa += $studentAvgGpa;
+                    $studentCount++;
+                }
+            }
+            
+            // Rata-rata IPK seluruh mahasiswa
+            $avgGpa = $studentCount > 0 ? $totalStudentGpa / $studentCount : 0;
+            
+            // Jika tidak ada data, gunakan nilai default
+            if ($avgGpa == 0) $avgGpa = 3.42;
+            
+            // Hitung distribusi per kategori IPK (untuk tambahan informasi)
+            $ipkRanges = [
+                '3.5-4.0' => 0,
+                '3.0-3.49' => 0,
+                '2.5-2.99' => 0,
+                '2.0-2.49' => 0,
+                '0-1.99' => 0
+            ];
+            
+            foreach ($studentGpas as $studentGpa) {
+                if ($studentGpa['totalSks'] > 0) {
+                    $studentAvgGpa = $studentGpa['totalWeightedGpa'] / $studentGpa['totalSks'];
+                    
+                    if ($studentAvgGpa >= 3.5) {
+                        $ipkRanges['3.5-4.0']++;
+                    } elseif ($studentAvgGpa >= 3.0) {
+                        $ipkRanges['3.0-3.49']++;
+                    } elseif ($studentAvgGpa >= 2.5) {
+                        $ipkRanges['2.5-2.99']++;
+                    } elseif ($studentAvgGpa >= 2.0) {
+                        $ipkRanges['2.0-2.49']++;
+                    } else {
+                        $ipkRanges['0-1.99']++;
+                    }
+                }
+            }
+            
+            // Persentase mahasiswa dengan IPK >= 3.0
+            $goodGpaPercentage = 0;
+            if ($studentCount > 0) {
+                $goodGpaPercentage = (($ipkRanges['3.5-4.0'] + $ipkRanges['3.0-3.49']) / $studentCount) * 100;
+            }
+            
+            return [
+                'value' => number_format($avgGpa, 2),
+                'trend' => null, // Tanpa trend untuk all
+                'distribution' => $ipkRanges,
+                'good_gpa_percentage' => round($goodGpaPercentage, 1),
+                'student_count' => $studentCount,
+                'additional_info' => 'IPK rata-rata dari semua mahasiswa di seluruh semester'
+            ];
+        });
     }
 
     /**

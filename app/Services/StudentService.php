@@ -16,9 +16,9 @@ class StudentService
     public function getActiveStudentsCount($termYearId = null)
     {
         // Membuat cache key yang berbeda berdasarkan term
-        // $cacheKey = 'student-stats' . ($termYearId && $termYearId !== 'all' ? '-' . $termYearId : '-all');
+        $cacheKey = 'student-stats' . ($termYearId && $termYearId !== 'all' ? '-' . $termYearId : '-all');
         
-        // return Cache::remember($cacheKey, 3600, function () use ($termYearId) {
+        return Cache::remember($cacheKey, 3600, function () use ($termYearId) {
             $query = DB::table('acd_student');
             
             // Jika term_year_id diberikan dan bukan 'all', filter berdasarkan term
@@ -89,7 +89,7 @@ class StudentService
                     'type' => $trend
                 ]
             ];
-        // });
+        });
     }
 
     /**

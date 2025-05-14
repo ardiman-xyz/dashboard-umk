@@ -6,6 +6,8 @@ use App\Services\AverageGpaService;
 use App\Services\FacultyDistributionService;
 use App\Services\GpaTrendService;
 use App\Services\GradeDistributionService;
+use App\Services\LecturerRatioService;
+use App\Services\LecturerService;
 use App\Services\StudentService;
 use App\Services\TermService;
 use Illuminate\Support\ServiceProvider;
@@ -39,6 +41,14 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(GradeDistributionService::class, function ($app) {
             return new GradeDistributionService();
+        });
+
+        $this->app->singleton(LecturerRatioService::class, function ($app) {
+            return new LecturerRatioService();
+        });
+
+        $this->app->singleton(LecturerService::class, function ($app) {
+            return new LecturerService();
         });
     }
 

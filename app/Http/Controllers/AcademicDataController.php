@@ -6,20 +6,24 @@ use App\Services\AverageGpaService;
 use App\Services\FacultyDistributionService;
 use App\Services\GpaTrendService;
 use App\Services\GradeDistributionService;
+use App\Services\LecturerRatioService;
+use App\Services\LecturerService;
 use App\Services\StudentService;
 use App\Services\TermService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
+
 class AcademicDataController extends Controller
 {
-
     protected StudentService $studentService;
     protected AverageGpaService $averageGpaService;
     protected TermService $termService;
     protected FacultyDistributionService $facultyDistributionService;
     protected GpaTrendService $gpaTrendService;
     protected GradeDistributionService $gradeDistributionService;
+    protected LecturerRatioService $lecturerRatioService;
+    protected LecturerService $lecturerService;
 
     public function __construct(
         StudentService $studentService, 
@@ -27,7 +31,9 @@ class AcademicDataController extends Controller
         TermService $termService,
         FacultyDistributionService $facultyDistributionService,
         GpaTrendService $gpaTrendService,
-        GradeDistributionService $gradeDistributionService
+        GradeDistributionService $gradeDistributionService,
+        LecturerRatioService $lecturerRatioService,
+        LecturerService $lecturerService
     ) {
         $this->studentService = $studentService;
         $this->averageGpaService = $averageGpaService;
@@ -35,6 +41,8 @@ class AcademicDataController extends Controller
         $this->facultyDistributionService = $facultyDistributionService;
         $this->gpaTrendService = $gpaTrendService;
         $this->gradeDistributionService = $gradeDistributionService;
+        $this->lecturerRatioService = $lecturerRatioService;
+        $this->lecturerService = $lecturerService;
     }
 
     public function index(Request $request)
@@ -45,23 +53,21 @@ class AcademicDataController extends Controller
         $currentTerm = $this->termService->getCurrentTerm($termYearId);
         $availableTerms = $this->termService->getAvailableTerms();
         
-        // Jika "all", ambil data gabungan semua term atau terbaru jika relevan
-        if ($termYearId === 'all') {
-            $avgGpa = $this->averageGpaService->getAverageGpa(); // Method khusus untuk all terms
-            $facultyDistribution = $this->facultyDistributionService->getFacultyDistributionSummary();
-            $gpaTrend = $this->gpaTrendService->getGpaTrendSummary(10);
-            $gradeDistribution = $this->gradeDistributionService->getGradeDistributionSummary();
-        } else {
-            // Gunakan term_year_id yang spesifik
-            $avgGpa = $this->averageGpaService->getAverageGpaByTerm($currentTerm['id']);
-            $facultyDistribution = $this->facultyDistributionService->getFacultyDistributionSummary($currentTerm['id']);
-            $gpaTrend = $this->gpaTrendService->getGpaTrendSummary(10, $currentTerm['id']);
-            $gradeDistribution = $this->gradeDistributionService->getGradeDistributionSummary($currentTerm['id']);
-        }
+        // Ambil data berdasarkan termYearId
+        $lecturerRatio = $this->lecturerRatioService->getLecturerRatio($termYearId);
+        $avgGpa = $termYearId === 'all' 
+            ? $this->averageGpaService->getAverageGpa()
+            : $this->averageGpaService->getAverageGpaByTerm($currentTerm['id']);
+        $facultyDistribution = $this->facultyDistributionService->getFacultyDistributionSummary($termYearId);
+        $gpaTrend = $this->gpaTrendService->getGpaTrendSummary(10, $termYearId);
+        $gradeDistribution = $this->gradeDistributionService->getGradeDistributionSummary($termYearId);
+        $lecturerCount = $this->lecturerService->getLecturerCount($termYearId);
+
         
         $stats = [
             'activeStudents' => $this->studentService->getActiveStudentsCount($termYearId),
             'avgGpa' => $avgGpa,
+            'lecturerRatio' => $lecturerRatio,
             'graduationRate' => [
                 'value' => '82%',
                 'trend' => [
@@ -69,20 +75,7 @@ class AcademicDataController extends Controller
                     'type' => 'up'
                 ]
             ],
-            'facultyRatio' => [
-                'value' => '1:15',
-                'trend' => [
-                    'value' => 'Ideal menurut standar BAN-PT',
-                    'type' => 'neutral'
-                ]
-            ],
-            'problemStudents' => [
-                'total' => '346',
-                'trend' => [
-                    'value' => '2.8% dari total mahasiswa',
-                    'type' => 'down'
-                ]
-            ],
+            'lecturerCount' => $lecturerCount,
             'facultyDistribution' => $facultyDistribution,
             'gpaTrend' => $gpaTrend,
             'gradeDistribution' => $gradeDistribution
