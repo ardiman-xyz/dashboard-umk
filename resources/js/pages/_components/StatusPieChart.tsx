@@ -103,7 +103,7 @@ export const StatusPieChart: React.FC<StatusPieChartProps> = ({ data, totalStude
                     <div className="flex items-center gap-2 leading-none font-medium">
                         Meningkat 3.2% dari tahun lalu <TrendingUp className="h-4 w-4" />
                     </div>
-                    <div className="text-muted-foreground leading-none">Menampilkan total mahasiswa aktif semester ini</div>
+                    <div className="text-muted-foreground leading-none">Menampilkan total mahasiswa semester ini</div>
                 </CardFooter>
             </CardContent>
         </Card>

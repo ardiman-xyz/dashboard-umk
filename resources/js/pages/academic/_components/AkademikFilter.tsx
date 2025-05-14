@@ -2,7 +2,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
 import { router, usePage } from '@inertiajs/react';
-import { Search, Settings2 } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 // Tipe data untuk term
@@ -40,13 +40,11 @@ export function AkademikFilter() {
     };
 
     const applyFilters = () => {
-        if (!termId) return;
-
         setIsSubmitting(true);
 
         router.visit(route(route().current() || 'academic.index'), {
             data: {
-                term_year_id: termId,
+                term_year_id: termId || 'all',
             },
             preserveState: true,
             onSuccess: () => {
@@ -66,8 +64,8 @@ export function AkademikFilter() {
                         <SelectValue placeholder="Tidak ada data" />
                     </SelectTrigger>
                 </Select>
-                <Button variant="outline" size="icon" className="shrink-0" disabled>
-                    <Settings2 className="h-4 w-4" />
+                <Button variant="outline" className="shrink-0" disabled>
+                    Filter
                 </Button>
             </div>
         );
@@ -76,25 +74,22 @@ export function AkademikFilter() {
     return (
         <div className="flex w-full flex-col gap-2 sm:flex-row md:w-auto">
             <Select value={termId} onValueChange={handleTermChange}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                    <SelectValue placeholder="Pilih Semester" />
+                <SelectTrigger className="w-full sm:w-[220px]">
+                    <SelectValue placeholder="Semua Tahun & Semester" />
                 </SelectTrigger>
                 <SelectContent>
                     <SelectGroup>
+                        <SelectItem value="all">Semua Tahun & Semester</SelectItem>
                         {filters.availableTerms.map((term) => (
                             <SelectItem key={term.id} value={term.id}>
-                                {term.id}
+                                {term.name}
                             </SelectItem>
                         ))}
                     </SelectGroup>
                 </SelectContent>
             </Select>
 
-            {/* <Button variant="outline" size="icon" className="shrink-0">
-                <Settings2 className="h-4 w-4" />
-            </Button> */}
-
-            <Button className="flex shrink-0 cursor-pointer items-center gap-2" onClick={applyFilters} disabled={isSubmitting || !termId}>
+            <Button className="flex shrink-0 cursor-pointer items-center gap-2" onClick={applyFilters} disabled={isSubmitting}>
                 <Search className="h-4 w-4" />
                 <span>{isSubmitting ? 'Loading...' : 'Filter'}</span>
             </Button>

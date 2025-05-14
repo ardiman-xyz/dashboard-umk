@@ -15,18 +15,24 @@ class TermService
      */
     public function getCurrentTerm($termYearId = null)
     {
+        // Jika termYearId adalah 'all' atau tidak ada, kembalikan semua tahun dan semester
+        if ($termYearId === 'all' || $termYearId === null) {
+            return [
+                'id' => 'all',
+                'name' => 'Semua Tahun & Semester'
+            ];
+        }
+        
         // Jika ID semester diberikan, coba dapatkan dari database
-        if ($termYearId) {
-            $term = DB::table('mstr_term_year')
-                ->where('Term_Year_Id', $termYearId)
-                ->first();
+        $term = DB::table('mstr_term_year')
+            ->where('Term_Year_Id', $termYearId)
+            ->first();
                 
-            if ($term) {
-                return [
-                    'id' => $term->Term_Year_Id,
-                    'name' => $term->Term_Year_Name ?? $this->formatTermName($term->Term_Year_Id)
-                ];
-            }
+        if ($term) {
+            return [
+                'id' => $term->Term_Year_Id,
+                'name' => $term->Term_Year_Name ?? $this->formatTermName($term->Term_Year_Id)
+            ];
         }
         
         // Jika tidak ada ID semester atau tidak ditemukan, cari semester aktif

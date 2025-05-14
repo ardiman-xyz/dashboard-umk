@@ -1,6 +1,8 @@
+// resources/js/pages/academic/_components/StatCards.tsx
 import { Card, CardContent } from '@/components/ui/card';
-import { AcademicStats, TermInfo } from '@/types/academic';
-import { router } from '@inertiajs/react';
+import { AcademicStats } from '@/types/academic';
+import { PageProps as InertiaPageProps } from '@inertiajs/core';
+import { router, usePage } from '@inertiajs/react';
 import { AlertTriangle, Award, BookOpen, ChevronRight, GraduationCap, TrendingDown, TrendingUp, Users } from 'lucide-react';
 import React from 'react';
 
@@ -15,14 +17,23 @@ interface StatCardProps {
         type: 'up' | 'down' | 'neutral';
     };
     termInfo?: string;
+    showTrend?: boolean;
 }
 
 interface StatCardsProps {
     stats: AcademicStats;
-    currentTerm?: TermInfo;
+    currentTerm?: any;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ title, value, description, icon, trend, detailPath, termInfo }) => {
+// Interface untuk mendapatkan filters dari page props
+interface CustomPageProps extends InertiaPageProps {
+    filters?: {
+        currentTerm?: any;
+    };
+    [key: string]: any; // Tambahkan index signature untuk tipe string
+}
+
+const StatCard: React.FC<StatCardProps> = ({ title, value, description, icon, trend, detailPath, termInfo, showTrend = true }) => {
     const handleClick = () => {
         router.visit(detailPath);
     };
@@ -40,7 +51,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, description, icon, tr
                     <div className="bg-primary/10 text-primary flex h-10 w-10 items-center justify-center rounded-full">{icon}</div>
                 </div>
 
-                {trend && (
+                {showTrend && trend && (
                     <div className="mt-3 flex items-center text-xs">
                         {trend.type === 'up' ? (
                             <TrendingUp className="mr-1 h-3 w-3 text-green-500" />
@@ -60,16 +71,26 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, description, icon, tr
 };
 
 export function StatCards({ stats, currentTerm }: StatCardsProps) {
+    // Menggunakan usePage untuk mendapatkan filters jika currentTerm tidak diberikan langsung
+    const pageProps = usePage<CustomPageProps>().props;
+    const effectiveCurrentTerm = currentTerm || pageProps.filters?.currentTerm || { id: 'all', name: 'Semua Tahun & Semester' };
+
+    // Cek apakah filter adalah 'all' atau filter spesifik
+    const isAllFilter = effectiveCurrentTerm?.id === 'all';
+
+    console.info('Current Term:', effectiveCurrentTerm);
+
     // Menggunakan data dari props
     const cardData = [
         {
-            title: 'Total Mahasiswa Aktif',
+            title: isAllFilter ? 'Total Mahasiswa' : 'Total Mahasiswa Aktif',
             value: stats.activeStudents.total,
-            description: 'Mahasiswa terdaftar semester ini',
+            description: isAllFilter ? 'Seluruh mahasiswa terdaftar' : 'Mahasiswa terdaftar semester ini',
             icon: <Users className="h-5 w-5" />,
             detailPath: route('academic.student.index'),
             trend: stats.activeStudents.trend,
-            termInfo: currentTerm?.name,
+            termInfo: isAllFilter ? undefined : effectiveCurrentTerm?.name,
+            showTrend: !isAllFilter, // Tampilkan trend hanya jika bukan 'all'
         },
         {
             title: 'Rata-rata IPK',
@@ -78,7 +99,7 @@ export function StatCards({ stats, currentTerm }: StatCardsProps) {
             icon: <BookOpen className="h-5 w-5" />,
             detailPath: route('academic.student.index'),
             trend: stats.avgGpa.trend,
-            termInfo: stats.avgGpa.term_info || currentTerm?.name,
+            termInfo: stats.avgGpa.term_info || (isAllFilter ? undefined : effectiveCurrentTerm?.name),
         },
         {
             title: 'Tingkat Kelulusan Tepat Waktu',
@@ -127,6 +148,7 @@ export function StatCards({ stats, currentTerm }: StatCardsProps) {
                     trend={card.trend}
                     detailPath={card.detailPath}
                     termInfo={card.termInfo}
+                    showTrend={card.showTrend !== false}
                 />
             ))}
         </div>

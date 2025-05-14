@@ -40,21 +40,27 @@ class AcademicDataController extends Controller
     public function index(Request $request)
     {
         // Ambil term_year_id dari request
-        $termYearId = $request->input('term_year_id');
+        $termYearId = $request->input('term_year_id', 'all');
         
         $currentTerm = $this->termService->getCurrentTerm($termYearId);
         $availableTerms = $this->termService->getAvailableTerms();
         
-        $avgGpa = $this->averageGpaService->getAverageGpaByTerm($currentTerm['id']);
-
-        $facultyDistribution = $this->facultyDistributionService->getFacultyDistributionSummary($currentTerm['id']);
-
-        $gpaTrend = $this->gpaTrendService->getGpaTrendSummary(10, $currentTerm['id']);
-        $gradeDistribution = $this->gradeDistributionService->getGradeDistributionSummary($currentTerm['id']);
-
+        // Jika "all", ambil data gabungan semua term atau terbaru jika relevan
+        if ($termYearId === 'all') {
+            $avgGpa = $this->averageGpaService->getAverageGpa(); // Method khusus untuk all terms
+            $facultyDistribution = $this->facultyDistributionService->getFacultyDistributionSummary();
+            $gpaTrend = $this->gpaTrendService->getGpaTrendSummary(10);
+            $gradeDistribution = $this->gradeDistributionService->getGradeDistributionSummary();
+        } else {
+            // Gunakan term_year_id yang spesifik
+            $avgGpa = $this->averageGpaService->getAverageGpaByTerm($currentTerm['id']);
+            $facultyDistribution = $this->facultyDistributionService->getFacultyDistributionSummary($currentTerm['id']);
+            $gpaTrend = $this->gpaTrendService->getGpaTrendSummary(10, $currentTerm['id']);
+            $gradeDistribution = $this->gradeDistributionService->getGradeDistributionSummary($currentTerm['id']);
+        }
         
         $stats = [
-            'activeStudents' => $this->studentService->getActiveStudentsCount(),
+            'activeStudents' => $this->studentService->getActiveStudentsCount($termYearId),
             'avgGpa' => $avgGpa,
             'graduationRate' => [
                 'value' => '82%',
@@ -81,7 +87,6 @@ class AcademicDataController extends Controller
             'gpaTrend' => $gpaTrend,
             'gradeDistribution' => $gradeDistribution
         ];
-
 
         return Inertia::render("academic/index", [
             'stats' => $stats,

@@ -1,3 +1,4 @@
+// resources/js/pages/academic/index.tsx
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { AcademicStats } from '@/types/academic';
@@ -20,9 +21,19 @@ const breadcrumbs: BreadcrumbItem[] = [
 
 interface AkademikProps {
     stats: AcademicStats;
+    filters: {
+        currentTerm: {
+            id: string;
+            name: string;
+        };
+        availableTerms: Array<{
+            id: string;
+            name: string;
+        }>;
+    };
 }
 
-export default function Akademik({ stats }: AkademikProps) {
+export default function Akademik({ stats, filters }: AkademikProps) {
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Akademik" />
@@ -33,7 +44,7 @@ export default function Akademik({ stats }: AkademikProps) {
                     <AkademikFilter />
                 </div>
 
-                <StatCards stats={stats} />
+                <StatCards stats={stats} currentTerm={filters.currentTerm} />
                 <DataCharts />
             </div>
         </AppLayout>

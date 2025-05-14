@@ -1,11 +1,52 @@
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AppLayout from '@/layouts/app-layout';
-import { BreadcrumbItem } from '@/types';
+import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
-import { Award, Clock, School, TrendingUp, Users } from 'lucide-react';
-import { Bar, BarChart, CartesianGrid, Cell, Legend, Line, LineChart, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+import { ChevronLeft, Download, Filter, Search, UserCircle } from 'lucide-react';
+import { useState } from 'react';
+import { Bar, BarChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
+
+// Data dummy untuk mahasiswa aktif
+const dummyStudents = [
+    { id: 1, nim: '22110001', name: 'Ahmad Fauzi', faculty: 'Teknik', department: 'Teknik Informatika', entryYear: '2022', status: 'Aktif' },
+    { id: 2, nim: '22110002', name: 'Siti Fatimah', faculty: 'Teknik', department: 'Teknik Informatika', entryYear: '2022', status: 'Aktif' },
+    { id: 3, nim: '21120034', name: 'Budi Santoso', faculty: 'Ekonomi', department: 'Manajemen', entryYear: '2021', status: 'Aktif' },
+    { id: 4, nim: '21120056', name: 'Dewi Anggraini', faculty: 'Ekonomi', department: 'Akuntansi', entryYear: '2021', status: 'Aktif' },
+    { id: 5, nim: '20130078', name: 'Muhammad Rizki', faculty: 'Hukum', department: 'Ilmu Hukum', entryYear: '2020', status: 'Aktif' },
+    { id: 6, nim: '23110012', name: 'Anisa Putri', faculty: 'Teknik', department: 'Teknik Sipil', entryYear: '2023', status: 'Aktif' },
+    { id: 7, nim: '22120089', name: 'Agus Hermawan', faculty: 'Ekonomi', department: 'Ekonomi Pembangunan', entryYear: '2022', status: 'Aktif' },
+    { id: 8, nim: '23110045', name: 'Ratna Sari', faculty: 'Teknik', department: 'Teknik Elektro', entryYear: '2023', status: 'Aktif' },
+    { id: 9, nim: '20140032', name: 'Hendra Wijaya', faculty: 'FKIP', department: 'Pendidikan Matematika', entryYear: '2020', status: 'Aktif' },
+    { id: 10, nim: '21130067', name: 'Maya Indah', faculty: 'Pertanian', department: 'Agribisnis', entryYear: '2021', status: 'Aktif' },
+    { id: 11, nim: '22110101', name: 'Dian Purnama', faculty: 'Teknik', department: 'Teknik Informatika', entryYear: '2022', status: 'Aktif' },
+    { id: 12, nim: '20130045', name: 'Yoga Pratama', faculty: 'Hukum', department: 'Ilmu Hukum', entryYear: '2020', status: 'Aktif' },
+];
+
+// Data dummy untuk chart distribusi fakultas
+const facultyDistributionData = [
+    { name: 'Teknik', value: 8543 },
+    { name: 'Ekonomi', value: 6721 },
+    { name: 'FKIP', value: 5432 },
+    { name: 'Pertanian', value: 3254 },
+    { name: 'Hukum', value: 2654 },
+];
+
+// Data dummy untuk chart distribusi angkatan
+const entryYearDistributionData = [
+    { name: '2020', value: 5124 },
+    { name: '2021', value: 5876 },
+    { name: '2022', value: 6329 },
+    { name: '2023', value: 6938 },
+];
+
+// Warna untuk chart
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -17,420 +58,273 @@ const breadcrumbs: BreadcrumbItem[] = [
         href: '/academic',
     },
     {
-        title: 'Mahasiswa',
-        href: '/academic/student',
+        title: 'Mahasiswa Aktif',
+        href: '/academic/mahasiswa-aktif',
     },
 ];
 
-const StudentDetail = () => {
-    // Data dummy untuk statistik mahasiswa
-    const studentStats = {
-        totalStudents: 12458,
-        activeStudents: 11245,
-        onLeaveStudents: 423,
-        probationStudents: 790,
-        maleStudents: 6879,
-        femaleStudents: 5579,
-        averageGPA: 3.42,
-        averageStudyTime: 4.2, // dalam tahun
-    };
+export default function ActiveStudentsDetail() {
+    const [searchTerm, setSearchTerm] = useState('');
+    const [facultyFilter, setFacultyFilter] = useState('all');
+    const [departmentFilter, setDepartmentFilter] = useState('all');
+    const [yearFilter, setYearFilter] = useState('all');
 
-    // Data dummy untuk tren mahasiswa per tahun
-    const studentTrendData = [
-        { year: '2020', total: 10850, active: 9865, graduated: 2145 },
-        { year: '2021', total: 11230, active: 10150, graduated: 2280 },
-        { year: '2022', total: 11720, active: 10620, graduated: 2345 },
-        { year: '2023', total: 12130, active: 11050, graduated: 2410 },
-        { year: '2024', total: 12458, active: 11245, graduated: 2567 },
-    ];
+    // Filter mahasiswa berdasarkan pencarian dan filter
+    const filteredStudents = dummyStudents.filter((student) => {
+        // Filter pencarian
+        const matchSearch =
+            student.nim.toLowerCase().includes(searchTerm.toLowerCase()) || student.name.toLowerCase().includes(searchTerm.toLowerCase());
 
-    // Data dummy untuk distribusi mahasiswa per fakultas
-    const facultyDistribution = [
-        { name: 'Teknik', value: 3245, color: '#3b82f6' },
-        { name: 'Pertanian', value: 1576, color: '#10b981' },
-        { name: 'Perikanan', value: 1234, color: '#06b6d4' },
-        { name: 'Ilmu Sosial', value: 1368, color: '#8b5cf6' },
-        { name: 'Hukum', value: 993, color: '#f59e0b' },
-        { name: 'Ekonomi', value: 1742, color: '#ef4444' },
-        { name: 'Keguruan', value: 2140, color: '#ec4899' },
-        { name: 'Agama Islam', value: 1560, color: '#6366f1' },
-    ];
+        // Filter fakultas
+        const matchFaculty = facultyFilter === 'all' || student.faculty === facultyFilter;
 
-    // Data dummy untuk distribusi angkatan
-    const yearDistribution = [
-        { name: 'Tahun 1', value: 3568, color: '#22c55e' },
-        { name: 'Tahun 2', value: 3245, color: '#3b82f6' },
-        { name: 'Tahun 3', value: 2987, color: '#f59e0b' },
-        { name: 'Tahun 4', value: 2458, color: '#ef4444' },
-        { name: 'Tahun 5+', value: 200, color: '#6b7280' },
-    ];
+        // Filter program studi
+        const matchDepartment = departmentFilter === 'all' || student.department === departmentFilter;
 
-    // Data dummy untuk statistik IPK
-    const gpaDistribution = [
-        { range: '3.75-4.00', count: 1245, percentage: 10 },
-        { range: '3.50-3.74', count: 2000, percentage: 16 },
-        { range: '3.25-3.49', count: 2420, percentage: 19 },
-        { range: '3.00-3.24', count: 2947, percentage: 24 },
-        { range: '2.50-2.99', count: 1856, percentage: 15 },
-        { range: '2.00-2.49', count: 1245, percentage: 10 },
-        { range: '1.00-1.99', count: 620, percentage: 5 },
-        { range: '0.00-0.99', count: 125, percentage: 1 },
-    ];
+        // Filter tahun masuk
+        const matchYear = yearFilter === 'all' || student.entryYear === yearFilter;
+
+        return matchSearch && matchFaculty && matchDepartment && matchYear;
+    });
+
+    // Daftar unik fakultas, program studi, dan tahun masuk untuk filter
+    const faculties = [...new Set(dummyStudents.map((student) => student.faculty))];
+    const departments = [...new Set(dummyStudents.map((student) => student.department))];
+    const entryYears = [...new Set(dummyStudents.map((student) => student.entryYear))];
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Detail Mahasiswa" />
+            <Head title="Mahasiswa Aktif" />
 
-            <div className="space-y-6 p-4">
-                {/* Header dengan Statistik Utama */}
-                <div className="flex flex-col gap-2">
-                    <h1 className="text-2xl font-bold">Data Mahasiswa</h1>
-                    <p className="text-muted-foreground">Informasi dan statistik lengkap tentang mahasiswa UMKendari</p>
-                </div>
-
-                {/* Statistik Ringkasan */}
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-base">Total Mahasiswa</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex items-center justify-between">
-                                <div className="text-3xl font-bold">{studentStats.totalStudents.toLocaleString()}</div>
-                                <Users className="h-8 w-8 text-blue-600" />
-                            </div>
-                            <p className="text-muted-foreground mt-2 text-xs">Seluruh mahasiswa terdaftar</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-base">Mahasiswa Aktif</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex items-center justify-between">
-                                <div className="text-3xl font-bold">{studentStats.activeStudents.toLocaleString()}</div>
-                                <School className="h-8 w-8 text-green-600" />
-                            </div>
-                            <p className="text-muted-foreground mt-2 text-xs">
-                                {((studentStats.activeStudents / studentStats.totalStudents) * 100).toFixed(1)}% dari total mahasiswa
-                            </p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-base">Rata-rata IPK</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex items-center justify-between">
-                                <div className="text-3xl font-bold">{studentStats.averageGPA}</div>
-                                <Award className="h-8 w-8 text-amber-600" />
-                            </div>
-                            <p className="text-muted-foreground mt-2 text-xs">Indeks Prestasi Kumulatif rata-rata</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-base">Rata-rata Masa Studi</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex items-center justify-between">
-                                <div className="text-3xl font-bold">{studentStats.averageStudyTime} tahun</div>
-                                <Clock className="h-8 w-8 text-purple-600" />
-                            </div>
-                            <p className="text-muted-foreground mt-2 text-xs">Durasi rata-rata penyelesaian studi</p>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Tab untuk Kategori Data */}
-                <Tabs defaultValue="demographics">
-                    <TabsList className="grid w-full grid-cols-4">
-                        <TabsTrigger value="demographics">Demografi</TabsTrigger>
-                        <TabsTrigger value="trends">Tren & Perkembangan</TabsTrigger>
-                        <TabsTrigger value="academic">Akademik</TabsTrigger>
-                        <TabsTrigger value="status">Status & Distribusi</TabsTrigger>
-                    </TabsList>
-
-                    {/* Tab Demografi */}
-                    <TabsContent value="demographics" className="pt-4">
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            {/* Gender Distribution */}
-                            <Card>
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-base">Distribusi Gender</CardTitle>
-                                    <CardDescription className="text-xs">Perbandingan jumlah mahasiswa laki-laki dan perempuan</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="h-[250px]">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie
-                                                    data={[
-                                                        { name: 'Laki-laki', value: studentStats.maleStudents, color: '#3b82f6' },
-                                                        { name: 'Perempuan', value: studentStats.femaleStudents, color: '#ec4899' },
-                                                    ]}
-                                                    cx="50%"
-                                                    cy="50%"
-                                                    innerRadius={60}
-                                                    outerRadius={90}
-                                                    paddingAngle={2}
-                                                    dataKey="value"
-                                                >
-                                                    {[
-                                                        { name: 'Laki-laki', value: studentStats.maleStudents, color: '#3b82f6' },
-                                                        { name: 'Perempuan', value: studentStats.femaleStudents, color: '#ec4899' },
-                                                    ].map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={entry.color} />
-                                                    ))}
-                                                </Pie>
-                                                <Tooltip formatter={(value) => [`${value} mahasiswa`, '']} />
-                                                <Legend />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </CardContent>
-                                <CardFooter className="flex-col gap-2 text-sm">
-                                    <div className="flex w-full justify-between">
-                                        <span>Laki-laki: {studentStats.maleStudents.toLocaleString()}</span>
-                                        <span>Perempuan: {studentStats.femaleStudents.toLocaleString()}</span>
-                                    </div>
-                                </CardFooter>
-                            </Card>
-
-                            {/* Distribution by Study Year */}
-                            <Card>
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-base">Distribusi Tahun Angkatan</CardTitle>
-                                    <CardDescription className="text-xs">Jumlah mahasiswa berdasarkan tahun studi</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="h-[250px]">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie
-                                                    data={yearDistribution}
-                                                    cx="50%"
-                                                    cy="50%"
-                                                    innerRadius={60}
-                                                    outerRadius={90}
-                                                    paddingAngle={2}
-                                                    dataKey="value"
-                                                >
-                                                    {yearDistribution.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={entry.color} />
-                                                    ))}
-                                                </Pie>
-                                                <Tooltip formatter={(value) => [`${value} mahasiswa`, '']} />
-                                                <Legend />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </CardContent>
-                            </Card>
+            <div className="container mx-auto p-4">
+                <div className="mb-6 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                        <Button variant="outline" size="icon" asChild>
+                            <a href="/academic">
+                                <ChevronLeft className="h-4 w-4" />
+                            </a>
+                        </Button>
+                        <div>
+                            <h1 className="text-2xl font-bold">Mahasiswa Aktif</h1>
+                            <p className="text-muted-foreground">Detail mahasiswa terdaftar semester ini</p>
                         </div>
+                    </div>
 
-                        <div className="mt-4">
-                            <Card>
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-base">Distribusi Mahasiswa per Fakultas</CardTitle>
-                                    <CardDescription className="text-xs">Jumlah mahasiswa berdasarkan fakultas</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="h-[300px]">
+                    <div className="flex gap-2">
+                        <Button variant="outline">
+                            <Download className="mr-2 h-4 w-4" />
+                            Export
+                        </Button>
+                    </div>
+                </div>
+
+                <div className="mb-6">
+                    <Card>
+                        <CardHeader className="pb-3">
+                            <CardTitle>Statistik Mahasiswa Aktif</CardTitle>
+                            <CardDescription>Total 24.267 mahasiswa aktif terdaftar pada semester ini</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <Tabs defaultValue="faculty" className="w-full">
+                                <TabsList className="mb-4 grid w-full grid-cols-2">
+                                    <TabsTrigger value="faculty">Distribusi Fakultas</TabsTrigger>
+                                    <TabsTrigger value="entryYear">Distribusi Angkatan</TabsTrigger>
+                                </TabsList>
+
+                                <TabsContent value="faculty">
+                                    <div className="h-80">
                                         <ResponsiveContainer width="100%" height="100%">
                                             <BarChart
-                                                layout="vertical"
-                                                data={facultyDistribution}
-                                                margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+                                                data={facultyDistributionData}
+                                                margin={{
+                                                    top: 20,
+                                                    right: 30,
+                                                    left: 20,
+                                                    bottom: 5,
+                                                }}
                                             >
-                                                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                                                <XAxis type="number" />
-                                                <YAxis dataKey="name" type="category" width={100} />
-                                                <Tooltip formatter={(value) => [`${value} mahasiswa`, '']} />
-                                                <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                                                    {facultyDistribution.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={entry.color} />
-                                                    ))}
-                                                </Bar>
+                                                <CartesianGrid strokeDasharray="3 3" />
+                                                <XAxis dataKey="name" />
+                                                <YAxis />
+                                                <Tooltip />
+                                                <Legend />
+                                                <Bar dataKey="value" name="Jumlah Mahasiswa" fill="#3b82f6" />
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </div>
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </TabsContent>
+                                </TabsContent>
 
-                    {/* Tab Tren & Perkembangan */}
-                    <TabsContent value="trends" className="pt-4">
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-base">Tren Jumlah Mahasiswa (5 Tahun Terakhir)</CardTitle>
-                                <CardDescription className="text-xs">Perkembangan jumlah mahasiswa dari tahun ke tahun</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="h-[350px]">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <LineChart data={studentTrendData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                                            <XAxis dataKey="year" />
-                                            <YAxis />
-                                            <Tooltip />
-                                            <Legend />
-                                            <Line type="monotone" dataKey="total" name="Total Mahasiswa" stroke="#3b82f6" strokeWidth={2} />
-                                            <Line type="monotone" dataKey="active" name="Mahasiswa Aktif" stroke="#22c55e" strokeWidth={2} />
-                                            <Line type="monotone" dataKey="graduated" name="Lulusan" stroke="#f59e0b" strokeWidth={2} />
-                                        </LineChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </CardContent>
-                            <CardFooter className="text-muted-foreground text-sm">
-                                <div className="flex items-center gap-2">
-                                    <TrendingUp className="h-4 w-4" />
-                                    <span>Pertumbuhan rata-rata 3.2% per tahun</span>
-                                </div>
-                            </CardFooter>
-                        </Card>
-                    </TabsContent>
-
-                    {/* Tab Akademik */}
-                    <TabsContent value="academic" className="pt-4">
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-base">Distribusi IPK Mahasiswa</CardTitle>
-                                <CardDescription className="text-xs">Persebaran IPK seluruh mahasiswa aktif</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="h-[350px]">
-                                    <ResponsiveContainer width="100%" height="100%">
-                                        <BarChart layout="vertical" data={gpaDistribution} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                                            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} />
-                                            <XAxis type="number" />
-                                            <YAxis dataKey="range" type="category" width={70} />
-                                            <Tooltip
-                                                formatter={(value, name, props) => {
-                                                    if (name === 'count') return [`${value.toLocaleString()} mahasiswa`, 'Jumlah'];
-                                                    return [`${value}%`, 'Persentase'];
-                                                }}
-                                            />
-                                            <Bar dataKey="count" name="Jumlah" fill="#3b82f6" radius={[0, 4, 4, 0]} />
-                                        </BarChart>
-                                    </ResponsiveContainer>
-                                </div>
-                            </CardContent>
-                            <CardFooter className="text-muted-foreground text-sm">
-                                <div>
-                                    {gpaDistribution.slice(0, 4).reduce((acc, curr) => acc + curr.percentage, 0)}% mahasiswa memiliki IPK 3.00 atau
-                                    lebih
-                                </div>
-                            </CardFooter>
-                        </Card>
-                    </TabsContent>
-
-                    {/* Tab Status & Distribusi */}
-                    <TabsContent value="status" className="pt-4">
-                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                            <Card>
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-base">Status Akademik Mahasiswa</CardTitle>
-                                    <CardDescription className="text-xs">Distribusi status mahasiswa</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="h-[250px]">
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie
-                                                    data={[
-                                                        { name: 'Aktif', value: studentStats.activeStudents, color: '#22c55e' },
-                                                        { name: 'Cuti', value: studentStats.onLeaveStudents, color: '#eab308' },
-                                                        { name: 'Probation', value: studentStats.probationStudents, color: '#ef4444' },
-                                                    ]}
-                                                    cx="50%"
-                                                    cy="50%"
-                                                    innerRadius={60}
-                                                    outerRadius={90}
-                                                    paddingAngle={2}
-                                                    dataKey="value"
+                                <TabsContent value="entryYear">
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                        <div className="h-80">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart
+                                                    data={entryYearDistributionData}
+                                                    margin={{
+                                                        top: 20,
+                                                        right: 30,
+                                                        left: 20,
+                                                        bottom: 5,
+                                                    }}
                                                 >
-                                                    {[
-                                                        { name: 'Aktif', value: studentStats.activeStudents, color: '#22c55e' },
-                                                        { name: 'Cuti', value: studentStats.onLeaveStudents, color: '#eab308' },
-                                                        { name: 'Probation', value: studentStats.probationStudents, color: '#ef4444' },
-                                                    ].map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={entry.color} />
-                                                    ))}
-                                                </Pie>
-                                                <Tooltip
-                                                    formatter={(value) => [
-                                                        `${value.toLocaleString()} mahasiswa (${((value / studentStats.totalStudents) * 100).toFixed(1)}%)`,
-                                                        '',
-                                                    ]}
-                                                />
-                                                <Legend />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </CardContent>
-                            </Card>
+                                                    <CartesianGrid strokeDasharray="3 3" />
+                                                    <XAxis dataKey="name" />
+                                                    <YAxis />
+                                                    <Tooltip />
+                                                    <Legend />
+                                                    <Bar dataKey="value" name="Jumlah Mahasiswa" fill="#22c55e" />
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </div>
 
-                            <Card>
-                                <CardHeader className="pb-2">
-                                    <CardTitle className="text-base">Detail Mahasiswa Bermasalah</CardTitle>
-                                    <CardDescription className="text-xs">Mahasiswa dengan IPK di bawah standar ({'<'}2.00)</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="space-y-4">
-                                        <div className="grid grid-cols-2 gap-4">
-                                            <div className="rounded-lg bg-red-50 p-4">
-                                                <div className="text-muted-foreground text-sm">Probation</div>
-                                                <div className="text-2xl font-bold">{studentStats.probationStudents}</div>
-                                                <div className="text-muted-foreground text-xs">
-                                                    {((studentStats.probationStudents / studentStats.totalStudents) * 100).toFixed(1)}% dari total
-                                                </div>
-                                            </div>
-                                            <div className="rounded-lg bg-amber-50 p-4">
-                                                <div className="text-muted-foreground text-sm">IPK &lt; 2.00</div>
-                                                <div className="text-2xl font-bold">
-                                                    {gpaDistribution.slice(6, 8).reduce((acc, curr) => acc + curr.count, 0)}
-                                                </div>
-                                                <div className="text-muted-foreground text-xs">
-                                                    {gpaDistribution.slice(6, 8).reduce((acc, curr) => acc + curr.percentage, 0)}% dari total
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div className="border-t pt-4">
-                                            <div className="text-sm font-medium">Distribusi per Fakultas</div>
-                                            <ul className="mt-2 space-y-2">
-                                                <li className="flex items-center justify-between">
-                                                    <span className="text-sm">Teknik</span>
-                                                    <span className="text-sm font-medium">127 mahasiswa</span>
-                                                </li>
-                                                <li className="flex items-center justify-between">
-                                                    <span className="text-sm">Ekonomi</span>
-                                                    <span className="text-sm font-medium">98 mahasiswa</span>
-                                                </li>
-                                                <li className="flex items-center justify-between">
-                                                    <span className="text-sm">Lainnya</span>
-                                                    <span className="text-sm font-medium">121 mahasiswa</span>
-                                                </li>
-                                            </ul>
+                                        <div className="h-80">
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <PieChart>
+                                                    <Pie
+                                                        data={entryYearDistributionData}
+                                                        cx="50%"
+                                                        cy="50%"
+                                                        labelLine={false}
+                                                        label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                                        outerRadius={80}
+                                                        fill="#8884d8"
+                                                        dataKey="value"
+                                                    >
+                                                        {entryYearDistributionData.map((entry, index) => (
+                                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                        ))}
+                                                    </Pie>
+                                                    <Tooltip />
+                                                </PieChart>
+                                            </ResponsiveContainer>
                                         </div>
                                     </div>
-                                </CardContent>
-                                <CardFooter>
-                                    <Button variant="outline" size="sm" className="w-full">
-                                        Lihat Daftar Lengkap
-                                    </Button>
-                                </CardFooter>
-                            </Card>
+                                </TabsContent>
+                            </Tabs>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <Card>
+                    <CardHeader className="pb-3">
+                        <div className="flex flex-col space-y-3 sm:flex-row sm:items-center sm:justify-between sm:space-y-0">
+                            <div>
+                                <CardTitle>Daftar Mahasiswa Aktif</CardTitle>
+                                <CardDescription>
+                                    {filteredStudents.length} mahasiswa ditampilkan dari total {dummyStudents.length}
+                                </CardDescription>
+                            </div>
+                            <div className="flex flex-col gap-2 sm:flex-row">
+                                <div className="relative">
+                                    <Search className="text-muted-foreground absolute top-2.5 left-2 h-4 w-4" />
+                                    <Input
+                                        placeholder="Cari NIM atau nama..."
+                                        className="pl-8"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                    />
+                                </div>
+                                <Button variant="outline" className="flex items-center gap-2">
+                                    <Filter className="h-4 w-4" />
+                                    <span>Filter</span>
+                                </Button>
+                            </div>
                         </div>
-                    </TabsContent>
-                </Tabs>
+                    </CardHeader>
+
+                    <CardContent>
+                        <div className="mb-4 grid grid-cols-1 gap-3 md:grid-cols-4">
+                            <Select value={facultyFilter} onValueChange={setFacultyFilter}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Filter Fakultas" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Fakultas</SelectItem>
+                                    {faculties.map((faculty) => (
+                                        <SelectItem key={faculty} value={faculty}>
+                                            {faculty}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+
+                            <Select value={departmentFilter} onValueChange={setDepartmentFilter}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Filter Program Studi" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Program Studi</SelectItem>
+                                    {departments.map((dept) => (
+                                        <SelectItem key={dept} value={dept}>
+                                            {dept}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+
+                            <Select value={yearFilter} onValueChange={setYearFilter}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Filter Angkatan" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Semua Angkatan</SelectItem>
+                                    {entryYears.map((year) => (
+                                        <SelectItem key={year} value={year}>
+                                            {year}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        <div className="rounded-md border">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead className="w-12 text-center">#</TableHead>
+                                        <TableHead>NIM</TableHead>
+                                        <TableHead>Nama Lengkap</TableHead>
+                                        <TableHead>Fakultas</TableHead>
+                                        <TableHead>Program Studi</TableHead>
+                                        <TableHead>Angkatan</TableHead>
+                                        <TableHead>Status</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredStudents.length > 0 ? (
+                                        filteredStudents.map((student, index) => (
+                                            <TableRow key={student.id}>
+                                                <TableCell className="text-center">{index + 1}</TableCell>
+                                                <TableCell className="font-medium">{student.nim}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex items-center gap-2">
+                                                        <UserCircle className="text-muted-foreground h-5 w-5" />
+                                                        {student.name}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell>{student.faculty}</TableCell>
+                                                <TableCell>{student.department}</TableCell>
+                                                <TableCell>{student.entryYear}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant="outline" className="bg-green-100 text-green-800">
+                                                        {student.status}
+                                                    </Badge>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={7} className="h-24 text-center">
+                                                Tidak ada data mahasiswa yang sesuai dengan filter.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
         </AppLayout>
     );
-};
-
-export default StudentDetail;
+}

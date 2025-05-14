@@ -3,8 +3,17 @@
 use App\Http\Controllers\AcademicDataController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\StudentController;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+
+Route::get("hash", function () {
+    $password = "WAex4b08rn6F";
+
+    $hashed = Hash::make($password);
+
+    echo $hashed;
+});
 
 Route::get('/', function () {
     return Inertia::render('welcome');
