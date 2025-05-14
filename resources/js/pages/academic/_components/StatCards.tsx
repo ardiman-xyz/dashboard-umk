@@ -92,6 +92,17 @@ export function StatCards({ stats, currentTerm }: StatCardsProps) {
             termInfo: isAllFilter ? undefined : effectiveCurrentTerm?.name,
             showTrend: !isAllFilter, // Tampilkan trend hanya jika bukan 'all'
         },
+
+        {
+            title: 'Jumlah Dosen',
+            value: stats.lecturerCount.total,
+            description: 'Total dosen aktif',
+            icon: <GraduationCap className="h-5 w-5" />,
+            detailPath: route('academic.student.index'),
+            trend: null, // Tidak menampilkan trend
+            termInfo: stats.lecturerCount.additional_info,
+            showTrend: false, // Tidak perlu menampilkan trend area
+        },
         {
             title: 'Rata-rata IPK',
             value: stats.avgGpa.value,
@@ -124,16 +135,6 @@ export function StatCards({ stats, currentTerm }: StatCardsProps) {
                     : isAllFilter
                       ? undefined
                       : effectiveCurrentTerm?.name,
-        },
-        {
-            title: 'Jumlah Dosen',
-            value: stats.lecturerCount.total,
-            description: 'Total dosen aktif',
-            icon: <GraduationCap className="h-5 w-5" />,
-            detailPath: route('academic.student.index'),
-            trend: null, // Tidak menampilkan trend
-            termInfo: stats.lecturerCount.additional_info,
-            showTrend: false, // Tidak perlu menampilkan trend area
         },
     ];
 
