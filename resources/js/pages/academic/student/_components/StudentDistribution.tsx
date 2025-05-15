@@ -39,35 +39,35 @@ const StudentDistribution: React.FC = () => {
                 <CardDescription>Total mahasiswa berdasarkan fakultas UMKendari</CardDescription>
             </CardHeader>
             <CardContent>
-                <ChartContainer config={facultyChartConfig} className="h-[400px]">
+                <ChartContainer config={facultyChartConfig} className="h-[300px] w-full">
                     <BarChart
                         data={facultyData}
                         layout="horizontal" // Horizontal layout
-                        margin={{ left: 10, right: 10, top: 10, bottom: 120 }} // Extra bottom margin for labels
+                        margin={{ left: 10, right: 10, top: 10, bottom: 0 }} // Extra bottom margin for labels
                     >
                         <CartesianGrid vertical={false} strokeDasharray="3 3" />
                         <XAxis
                             dataKey="faculty"
                             tickLine={false}
                             axisLine={false}
-                            tickMargin={5}
-                            angle={-45} // Rotate labels
+                            tickMargin={10}
+                            angle={-20} // Rotate labels
                             textAnchor="end" // Align labels
                             interval={0} // Show all labels
                             height={100} // More space for labels
-                            fontSize={12}
+                            fontSize={10}
                         />
                         <YAxis tickLine={false} axisLine={false} />
                         <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dashed" />} />
                         <Bar
                             dataKey="current"
-                            fill="#1ea896" // Teal color (Sesuaikan dengan tema Anda)
+                            fill="#283618" // Teal color (Sesuaikan dengan tema Anda)
                             radius={[4, 4, 0, 0]}
                             barSize={20}
                         />
                         <Bar
                             dataKey="previous"
-                            fill="#e74c3c" // Merah-oranye (Sesuaikan dengan tema Anda)
+                            fill="#dda15e" // Merah-oranye (Sesuaikan dengan tema Anda)
                             radius={[4, 4, 0, 0]}
                             barSize={20}
                         />
