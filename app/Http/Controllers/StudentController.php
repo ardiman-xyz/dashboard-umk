@@ -11,4 +11,7 @@ class StudentController extends Controller
     {
         return Inertia::render("students/index");
     }
+
+    
+
 }

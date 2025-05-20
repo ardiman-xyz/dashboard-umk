@@ -1,15 +1,28 @@
-// StudentDistribution.tsx
-// Simpan di: pages/academic/student/_components/StudentDistribution.tsx
-
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from '@/components/ui/chart';
 import { TrendingUp } from 'lucide-react';
 import React from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 
-const StudentDistribution: React.FC = () => {
-    // Data distribusi berdasarkan fakultas - tahun ini dan tahun lalu
-    const facultyData = [
+interface FacultyData {
+    faculty: string;
+    faculty_acronym: string;
+    faculty_id: string;
+    current: number;
+    previous: number;
+    percent_change: number;
+}
+
+interface FacultyDistributionProps {
+    distribution: FacultyData[];
+    total_current: number;
+    total_previous: number;
+    percent_change: number;
+}
+
+const StudentDistribution: React.FC<{ facultyDistribution?: FacultyDistributionProps }> = ({ facultyDistribution }) => {
+    // Data fallback jika props tidak tersedia
+    const fallbackData = [
         { faculty: 'FKIP', current: 380, previous: 340 },
         { faculty: 'TEKNIK', current: 320, previous: 290 },
         { faculty: 'EKONOMI DAN BISNIS ISLAM', current: 300, previous: 340 },
@@ -20,15 +33,27 @@ const StudentDistribution: React.FC = () => {
         { faculty: 'PERTANIAN', current: 90, previous: 100 },
     ];
 
+    // Gunakan data dari fakultyDistribution jika tersedia, jika tidak gunakan fallback
+    const chartData = facultyDistribution
+        ? facultyDistribution.distribution.map((item) => ({
+              faculty: item.faculty_acronym === 'T' ? item.faculty : item.faculty_acronym,
+              current: item.current,
+              previous: item.previous,
+          }))
+        : fallbackData;
+
+    // Gunakan persentase perubahan dari data jika tersedia
+    const percentChange = facultyDistribution ? facultyDistribution.percent_change : 5.2;
+
     // Konfigurasi chart untuk fakultas
     const facultyChartConfig = {
         current: {
             label: 'Tahun Ini',
-            color: 'hsl(174, 100%, 29%)', // Warna teal
+            color: '#283618', // Hijau tua
         },
         previous: {
             label: 'Tahun Lalu',
-            color: 'hsl(5, 85%, 63%)', // Warna merah-oranye
+            color: '#dda15e', // Cokelat
         },
     } satisfies ChartConfig;
 
@@ -40,34 +65,30 @@ const StudentDistribution: React.FC = () => {
             </CardHeader>
             <CardContent>
                 <ChartContainer config={facultyChartConfig} className="h-[300px] w-full">
-                    <BarChart
-                        data={facultyData}
-                        layout="horizontal" // Horizontal layout
-                        margin={{ left: 10, right: 10, top: 10, bottom: 0 }} // Extra bottom margin for labels
-                    >
+                    <BarChart data={chartData} layout="horizontal" margin={{ left: 10, right: 10, top: 10, bottom: 0 }}>
                         <CartesianGrid vertical={false} strokeDasharray="3 3" />
                         <XAxis
                             dataKey="faculty"
                             tickLine={false}
                             axisLine={false}
                             tickMargin={10}
-                            angle={-20} // Rotate labels
-                            textAnchor="end" // Align labels
-                            interval={0} // Show all labels
-                            height={100} // More space for labels
+                            angle={-20}
+                            textAnchor="end"
+                            interval={0}
+                            height={100}
                             fontSize={10}
                         />
-                        <YAxis tickLine={false} axisLine={false} />
+                        <YAxis tickLine={false} axisLine={false} domain={[0, 'dataMax + 50']} ticks={[0, 95, 190, 285, 380]} />
                         <ChartTooltip cursor={false} content={<ChartTooltipContent indicator="dashed" />} />
                         <Bar
                             dataKey="current"
-                            fill="#283618" // Teal color (Sesuaikan dengan tema Anda)
+                            fill="#283618" // Hijau tua (sesuai dengan screenshot)
                             radius={[4, 4, 0, 0]}
                             barSize={20}
                         />
                         <Bar
                             dataKey="previous"
-                            fill="#dda15e" // Merah-oranye (Sesuaikan dengan tema Anda)
+                            fill="#dda15e" // Cokelat (sesuai dengan screenshot)
                             radius={[4, 4, 0, 0]}
                             barSize={20}
                         />
@@ -76,7 +97,7 @@ const StudentDistribution: React.FC = () => {
             </CardContent>
             <CardFooter className="flex-col items-start gap-2 text-sm">
                 <div className="flex gap-2 leading-none font-medium">
-                    Meningkat 5,2% dibandingkan tahun lalu <TrendingUp className="h-4 w-4 text-green-500" />
+                    Meningkat {percentChange}% dibandingkan tahun lalu <TrendingUp className="h-4 w-4 text-green-500" />
                 </div>
                 <div className="text-muted-foreground leading-none">Menampilkan total mahasiswa per fakultas pada semester ini</div>
             </CardFooter>

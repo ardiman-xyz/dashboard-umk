@@ -1,6 +1,6 @@
 // StudentDashboard.tsx
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartConfig, ChartTooltip } from '@/components/ui/chart';
+import { ChartTooltip } from '@/components/ui/chart';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head } from '@inertiajs/react';
@@ -32,95 +32,6 @@ export default function StudentDashboard() {
         averageGPA: 3.42,
         attendanceRate: 87,
     };
-
-    const genderData = [
-        { gender: 'Laki-laki', count: 6879, color: '#2563eb' },
-        { gender: 'Perempuan', count: 5579, color: '#ec4899' },
-    ];
-
-    const religionData = [
-        { name: 'Islam', value: 9345, color: '#10b981' },
-        { name: 'Kristen', value: 1654, color: '#3b82f6' },
-        { name: 'Katolik', value: 980, color: '#6366f1' },
-        { name: 'Hindu', value: 253, color: '#f59e0b' },
-        { name: 'Buddha', value: 176, color: '#ef4444' },
-        { name: 'Konghucu', value: 50, color: '#8b5cf6' },
-    ];
-
-    const attendanceData = [
-        { month: 'Jan', attendance: 89 },
-        { month: 'Feb', attendance: 92 },
-        { month: 'Mar', attendance: 87 },
-        { month: 'Apr', attendance: 91 },
-        { month: 'May', attendance: 85 },
-        { month: 'Jun', attendance: 88 },
-        { month: 'Jul', attendance: 86 },
-        { month: 'Aug', attendance: 93 },
-        { month: 'Sep', attendance: 90 },
-        { month: 'Oct', attendance: 87 },
-        { month: 'Nov', attendance: 89 },
-        { month: 'Dec', attendance: 84 },
-    ];
-
-    const enrollmentTrendData = [
-        { year: '2020', students: 10850 },
-        { year: '2021', students: 11230 },
-        { year: '2022', students: 11720 },
-        { year: '2023', students: 12130 },
-        { year: '2024', students: 12458 },
-    ];
-
-    const geographicData = [
-        { province: 'Jawa Tengah', students: 4567 },
-        { province: 'Jawa Barat', students: 2345 },
-        { province: 'Jawa Timur', students: 1789 },
-        { province: 'DKI Jakarta', students: 1456 },
-        { province: 'DIY', students: 987 },
-        { province: 'Sumatera', students: 765 },
-        { province: 'Kalimantan', students: 345 },
-        { province: 'Provinsi Lainnya', students: 204 },
-    ];
-
-    const scholarshipData = [
-        { name: 'Beasiswa Pemerintah', students: 876, amount: '1.2M' },
-        { name: 'Beasiswa Prestasi', students: 452, amount: '650K' },
-        { name: 'Beasiswa Khusus', students: 234, amount: '350K' },
-        { name: 'Beasiswa Perusahaan', students: 189, amount: '200K' },
-    ];
-
-    const topPerformingStudents = [
-        { id: 'S12345', name: 'Ahmad Fauzi', program: 'Teknik Informatika', gpa: 3.97 },
-        { id: 'S12567', name: 'Dina Putri', program: 'Kedokteran', gpa: 3.95 },
-        { id: 'S13456', name: 'Budi Santoso', program: 'Manajemen', gpa: 3.92 },
-        { id: 'S15678', name: 'Rini Wulandari', program: 'Hukum', gpa: 3.91 },
-        { id: 'S14567', name: 'Siti Rahayu', program: 'Akuntansi', gpa: 3.89 },
-    ];
-
-    // Chart configs
-    const genderChartConfig = {
-        male: {
-            label: 'Laki-laki',
-            color: '#2563eb',
-        },
-        female: {
-            label: 'Perempuan',
-            color: '#ec4899',
-        },
-    } satisfies ChartConfig;
-
-    const attendanceChartConfig = {
-        attendance: {
-            label: 'Tingkat Kehadiran',
-            color: '#10b981',
-        },
-    } satisfies ChartConfig;
-
-    const enrollmentChartConfig = {
-        students: {
-            label: 'Jumlah Mahasiswa',
-            color: '#3b82f6',
-        },
-    } satisfies ChartConfig;
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>

@@ -15,9 +15,9 @@ class FacultyDistributionService
      */
     public function getFacultyDistribution($termYearId = null)
     {
-        $cacheKey = 'faculty-distribution' . ($termYearId ? '-' . $termYearId : '');
+        // $cacheKey = 'faculty-distribution' . ($termYearId ? '-' . $termYearId : '');
         
-        return Cache::remember($cacheKey, 3600, function () use ($termYearId) {
+        // return Cache::remember($cacheKey, 3600, function () use ($termYearId) {
             // Menentukan tahun akademik untuk perbandingan
             $currentYear = $this->getYearFromTermId($termYearId);
             $previousYear = $currentYear - 1;
@@ -35,6 +35,7 @@ class FacultyDistributionService
             foreach ($currentData as $facultyData) {
                 $facultyId = $facultyData->faculty_id;
                 $facultyName = $facultyData->faculty_name;
+                $facultyAcronym = $facultyData->faculty_acronym;
                 $currentCount = $facultyData->student_count;
                 
                 // Cari data tahun lalu untuk fakultas ini
@@ -54,6 +55,7 @@ class FacultyDistributionService
                 
                 $result[] = [
                     'faculty' => $facultyName,
+                    'faculty_acronym' => $facultyAcronym,
                     'faculty_id' => $facultyId,
                     'current' => $currentCount,
                     'previous' => $previousCount,
@@ -67,7 +69,7 @@ class FacultyDistributionService
             });
             
             return $result;
-        });
+        // });
     }
     
     /**
@@ -79,17 +81,17 @@ class FacultyDistributionService
     private function getStudentCountByFaculty($academicYear)
     {
         return DB::table('acd_student')
-            ->join('mstr_department', 'acd_student.Department_Id', '=', 'mstr_department.Department_Id')
-            ->join('mstr_faculty', 'mstr_department.Faculty_Id', '=', 'mstr_faculty.Faculty_Id')
-            //->where('acd_student.Register_Status_Id', 'A') // Mahasiswa aktif
-            ->where('acd_student.Entry_Year_Id', 'like', $academicYear . '%') // Filter tahun akademik
-            ->select(
-                'mstr_faculty.Faculty_Id as faculty_id',
-                'mstr_faculty.Faculty_Name as faculty_name',
-                DB::raw('COUNT(acd_student.Student_Id) as student_count')
-            )
-            ->groupBy('mstr_faculty.Faculty_Id', 'mstr_faculty.Faculty_Name')
-            ->get();
+                    ->join('mstr_department', 'acd_student.Department_Id', '=', 'mstr_department.Department_Id')
+                    ->join('mstr_faculty', 'mstr_department.Faculty_Id', '=', 'mstr_faculty.Faculty_Id')
+                    ->where('acd_student.Entry_Year_Id', 'like', $academicYear . '%') 
+                    ->select(
+                        'mstr_faculty.Faculty_Id as faculty_id',
+                        'mstr_faculty.Faculty_Name as faculty_name',
+                        'mstr_faculty.Faculty_Acronym as faculty_acronym',
+                        DB::raw('COUNT(acd_student.Student_Id) as student_count')
+                    )
+                    ->groupBy('mstr_faculty.Faculty_Id', 'mstr_faculty.Faculty_Name')
+                    ->get();
     }
     
     /**

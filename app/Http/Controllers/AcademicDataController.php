@@ -90,8 +90,13 @@ class AcademicDataController extends Controller
         ]);
     }
 
-    public function student()
+    public function student(Request $request)
     {
-        return Inertia::render("academic/student/index");
+
+        $termYearId = $request->input('term_year_id', 'all');
+
+        $facultyDistribution = $this->facultyDistributionService->getFacultyDistributionSummary($termYearId);
+
+        return Inertia::render("academic/student/index", compact("facultyDistribution"));
     }
 }

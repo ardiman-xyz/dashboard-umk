@@ -1,4 +1,3 @@
-'use client';
 import { Head } from '@inertiajs/react';
 import { ChevronLeft } from 'lucide-react';
 import React from 'react';
@@ -31,7 +30,29 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
-const StudentDetailPage: React.FC = () => {
+interface FacultyData {
+    faculty: string;
+    faculty_acronym: string;
+    faculty_id: string;
+    current: number;
+    previous: number;
+    percent_change: number;
+}
+
+interface FacultyDistributionProps {
+    distribution: FacultyData[];
+    total_current: number;
+    total_previous: number;
+    percent_change: number;
+}
+
+interface PageProps {
+    facultyDistribution?: FacultyDistributionProps;
+}
+
+const StudentDetailPage: React.FC<PageProps> = ({ facultyDistribution }) => {
+    console.info(facultyDistribution);
+
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
             <Head title="Detail Mahasiswa" />
@@ -68,7 +89,7 @@ const StudentDetailPage: React.FC = () => {
                 {/* Distribusi Mahasiswa (Fakultas & Gender) */}
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <div>
-                        <StudentDistribution />
+                        <StudentDistribution facultyDistribution={facultyDistribution} />
                     </div>
                     <div>
                         <StudentGenderDistributionByFaculty />
