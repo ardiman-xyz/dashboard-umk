@@ -1,6 +1,7 @@
-import { Head } from '@inertiajs/react';
+import { PageProps as InertiaPageProps } from '@inertiajs/core';
+import { Head, router, usePage } from '@inertiajs/react';
 import { ChevronLeft } from 'lucide-react';
-import React from 'react';
+import React, { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -30,6 +31,11 @@ const breadcrumbs: BreadcrumbItem[] = [
     },
 ];
 
+interface ReligionData {
+    name: string;
+    value: number;
+}
+
 interface FacultyData {
     faculty: string;
     faculty_acronym: string;
@@ -46,12 +52,67 @@ interface FacultyDistributionProps {
     percent_change: number;
 }
 
-interface PageProps {
-    facultyDistribution?: FacultyDistributionProps;
+interface GenderData {
+    faculty: string;
+    laki: number;
+    perempuan: number;
 }
 
-const StudentDetailPage: React.FC<PageProps> = ({ facultyDistribution }) => {
-    console.info(facultyDistribution);
+interface AgeData {
+    age: string;
+    value: number;
+}
+
+interface RegionData {
+    name: string;
+    value: number;
+}
+
+interface StudentPageProps extends InertiaPageProps {
+    facultyDistribution?: FacultyDistributionProps;
+    genderDistribution?: GenderData[];
+    religionDistribution?: ReligionData[];
+    ageDistribution?: AgeData[];
+    regionDistribution?: RegionData[];
+    filters?: {
+        currentTerm?: {
+            id: string;
+            name: string;
+        };
+    };
+    studentStatus?: string;
+}
+
+const StudentDetailPage: React.FC<StudentPageProps> = ({
+    facultyDistribution,
+    genderDistribution,
+    studentStatus,
+    religionDistribution,
+    ageDistribution,
+    regionDistribution,
+}) => {
+    // Mendapatkan informasi filter dari page props
+    const { filters } = usePage<StudentPageProps>().props;
+
+    // State untuk filter status mahasiswa
+    const [currentStudentStatus, setCurrentStudentStatus] = useState(studentStatus || 'all');
+
+    // Tentukan apakah filter saat ini adalah 'all'
+    const isAllFilter = filters?.currentTerm?.id === 'all' || !filters?.currentTerm?.id;
+
+    // Handle perubahan filter status mahasiswa
+    const handleStudentStatusChange = (value: string) => {
+        setCurrentStudentStatus(value);
+
+        // Redirect dengan parameter baru
+        router.visit(route('academic.student.index'), {
+            data: {
+                student_status: value,
+                term_year_id: filters?.currentTerm?.id || 'all',
+            },
+            preserveState: true,
+        });
+    };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
@@ -68,17 +129,20 @@ const StudentDetailPage: React.FC<PageProps> = ({ facultyDistribution }) => {
                         </Button>
                         <div>
                             <h1 className="text-2xl font-bold">Data Mahasiswa</h1>
+                            {filters?.currentTerm && (
+                                <p className="text-muted-foreground text-sm">{isAllFilter ? 'Semua Tahun & Semester' : filters.currentTerm.name}</p>
+                            )}
                         </div>
                     </div>
 
                     <div>
-                        <Select defaultValue="faculty">
+                        <Select value={currentStudentStatus} onValueChange={handleStudentStatusChange}>
                             <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Pilih" />
+                                <SelectValue placeholder="Pilih Status" />
                             </SelectTrigger>
                             <SelectContent>
-                                <SelectItem value="all">Semua</SelectItem>
-                                <SelectItem value="faculty">Fakultas</SelectItem>
+                                <SelectItem value="all">Semua Mahasiswa</SelectItem>
+                                <SelectItem value="active">Mahasiswa Aktif</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -89,24 +153,42 @@ const StudentDetailPage: React.FC<PageProps> = ({ facultyDistribution }) => {
                 {/* Distribusi Mahasiswa (Fakultas & Gender) */}
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <div>
-                        <StudentDistribution facultyDistribution={facultyDistribution} />
+                        {/* Pass isAllFilter dan studentStatus prop ke StudentDistribution */}
+                        <StudentDistribution
+                            facultyDistribution={facultyDistribution}
+                            isAllFilter={isAllFilter}
+                            studentStatus={currentStudentStatus}
+                        />
                     </div>
                     <div>
-                        <StudentGenderDistributionByFaculty />
+                        {/* Pass genderDistribution dengan props yang benar */}
+                        <StudentGenderDistributionByFaculty
+                            genderDistribution={genderDistribution}
+                            studentStatus={currentStudentStatus}
+                            isAllFilter={isAllFilter}
+                        />
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                     <div className="h-full">
-                        <StudentReligionDistribution />
+                        <StudentReligionDistribution
+                            religionDistribution={religionDistribution}
+                            studentStatus={currentStudentStatus}
+                            isAllFilter={isAllFilter}
+                        />
                     </div>
                     <div className="h-full">
-                        <StudentAgeDistribution />
+                        <StudentAgeDistribution ageDistribution={ageDistribution} studentStatus={currentStudentStatus} isAllFilter={isAllFilter} />
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                    <StudentRegionDistribution />
+                    <StudentRegionDistribution
+                        regionDistribution={regionDistribution}
+                        studentStatus={currentStudentStatus}
+                        isAllFilter={isAllFilter}
+                    />
                 </div>
             </div>
         </AppLayout>

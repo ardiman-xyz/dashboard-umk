@@ -6,7 +6,7 @@ import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from 'recharts';
 interface RegionData {
     name: string;
     value: number;
-    color: string;
+    color?: string;
 }
 
 interface TooltipProps {
@@ -16,9 +16,32 @@ interface TooltipProps {
     }>;
 }
 
-const StudentRegionDistribution: React.FC = () => {
-    // Data distribusi daerah asal
-    const regionData: RegionData[] = [
+const StudentRegionDistribution: React.FC<{
+    regionDistribution?: RegionData[];
+    studentStatus?: string;
+    isAllFilter?: boolean;
+}> = ({ regionDistribution, studentStatus = 'all', isAllFilter = false }) => {
+    // Predefined colors untuk regions
+    const regionColors: { [key: string]: string } = {
+        'Sulawesi Tenggara': '#22c55e', // green
+        'Sulawesi Selatan': '#3b82f6', // blue
+        'Sulawesi Tengah': '#6366f1', // indigo
+        'Sulawesi Barat': '#f59e0b', // amber
+        'Sulawesi Utara': '#ef4444', // red
+        Gorontalo: '#8b5cf6', // violet
+        Papua: '#ec4899', // pink
+        Maluku: '#f97316', // orange
+        'Daerah Lainnya': '#6b7280', // gray
+        'Tidak Diketahui': '#9ca3af', // gray-400
+    };
+
+    // Function untuk assign warna berdasarkan nama region
+    const getColorByRegion = (regionName: string): string => {
+        return regionColors[regionName] || '#6b7280'; // default gray
+    };
+
+    // Data fallback jika props tidak tersedia
+    const fallbackData: RegionData[] = [
         { name: 'Sulawesi Tenggara', value: 15670, color: '#22c55e' },
         { name: 'Sulawesi Selatan', value: 3245, color: '#3b82f6' },
         { name: 'Sulawesi Tengah', value: 1458, color: '#6366f1' },
@@ -30,17 +53,52 @@ const StudentRegionDistribution: React.FC = () => {
         { name: 'Daerah Lainnya', value: 1888, color: '#6b7280' },
     ];
 
+    // Gunakan data real jika ada, fallback ke dummy
+    const regionData: RegionData[] =
+        regionDistribution && regionDistribution.length > 0
+            ? regionDistribution.map((item) => ({
+                  name: item.name,
+                  value: item.value,
+                  color: item.color || getColorByRegion(item.name),
+              }))
+            : fallbackData;
+
+    // Dynamic title dan description berdasarkan filter
+    const getChartTitle = () => {
+        if (studentStatus === 'active') {
+            return 'Distribusi Asal Daerah Mahasiswa Aktif';
+        }
+        return 'Distribusi Asal Daerah';
+    };
+
+    const getChartDescription = () => {
+        if (studentStatus === 'active') {
+            if (isAllFilter) {
+                return 'Asal daerah mahasiswa aktif semester saat ini';
+            }
+            return 'Asal daerah mahasiswa aktif berdasarkan semester';
+        }
+
+        if (isAllFilter) {
+            return 'Mahasiswa berdasarkan provinsi asal (semua data)';
+        }
+        return 'Mahasiswa berdasarkan provinsi asal';
+    };
+
     // Hitung total dan statistik
     const totalStudents: number = regionData.reduce((sum, item) => sum + item.value, 0);
 
     // Cari provinsi dengan mahasiswa terbanyak
-    const largestRegion = [...regionData].sort((a, b) => b.value - a.value)[0];
-    const largestRegionPercentage = ((largestRegion.value / totalStudents) * 100).toFixed(1);
+    const largestRegion = totalStudents > 0 ? [...regionData].sort((a, b) => b.value - a.value)[0] : { name: 'N/A', value: 0 };
+
+    const largestRegionPercentage = totalStudents > 0 ? ((largestRegion.value / totalStudents) * 100).toFixed(1) : '0';
 
     // Hitung persentase mahasiswa asal Sulawesi
     const sulawesiProvinces = ['Sulawesi Tenggara', 'Sulawesi Selatan', 'Sulawesi Tengah', 'Sulawesi Barat', 'Sulawesi Utara', 'Gorontalo'];
+
     const sulawesiStudents = regionData.filter((region) => sulawesiProvinces.includes(region.name)).reduce((sum, item) => sum + item.value, 0);
-    const sulawesiPercentage = ((sulawesiStudents / totalStudents) * 100).toFixed(1);
+
+    const sulawesiPercentage = totalStudents > 0 ? ((sulawesiStudents / totalStudents) * 100).toFixed(1) : '0';
 
     // Format jumlah dengan tanda ribuan
     const formatNumber = (num: number): string => {
@@ -50,7 +108,7 @@ const StudentRegionDistribution: React.FC = () => {
     // Konfigurasi chart
     const chartConfig = {
         value: {
-            label: 'Jumlah Mahasiswa',
+            label: studentStatus === 'active' ? 'Mahasiswa Aktif' : 'Jumlah Mahasiswa',
             color: 'hsl(var(--chart-1))',
         },
     } satisfies ChartConfig;
@@ -59,12 +117,14 @@ const StudentRegionDistribution: React.FC = () => {
     const CustomTooltip: React.FC<TooltipProps> = ({ active, payload }) => {
         if (active && payload && payload.length > 0) {
             const data = payload[0].payload;
-            const percentage = ((data.value / totalStudents) * 100).toFixed(1);
+            const percentage = totalStudents > 0 ? ((data.value / totalStudents) * 100).toFixed(1) : '0';
 
             return (
                 <div className="bg-background border-border rounded-lg border p-2 shadow-md">
                     <p className="font-medium">{data.name}</p>
-                    <p className="text-sm">{formatNumber(data.value)} mahasiswa</p>
+                    <p className="text-sm">
+                        {formatNumber(data.value)} mahasiswa {studentStatus === 'active' ? 'aktif' : ''}
+                    </p>
                     <p className="text-muted-foreground text-sm">{percentage}% dari total</p>
                 </div>
             );
@@ -72,11 +132,30 @@ const StudentRegionDistribution: React.FC = () => {
         return null;
     };
 
+    // Dynamic footer text
+    const getFooterText = () => {
+        if (totalStudents === 0) return 'Data tidak tersedia';
+
+        if (studentStatus === 'active') {
+            return `Mayoritas mahasiswa aktif dari ${largestRegion.name} (${largestRegionPercentage}%)`;
+        }
+        return `Mayoritas dari ${largestRegion.name} (${largestRegionPercentage}%)`;
+    };
+
+    const getFooterDescription = () => {
+        if (totalStudents === 0) return 'Tidak ada data mahasiswa';
+
+        if (studentStatus === 'active') {
+            return `${sulawesiPercentage}% mahasiswa aktif berasal dari Pulau Sulawesi`;
+        }
+        return `${sulawesiPercentage}% mahasiswa berasal dari Pulau Sulawesi`;
+    };
+
     return (
         <Card className="">
             <CardHeader>
-                <CardTitle>Distribusi Asal Daerah</CardTitle>
-                <CardDescription>Mahasiswa berdasarkan provinsi asal</CardDescription>
+                <CardTitle>{getChartTitle()}</CardTitle>
+                <CardDescription>{getChartDescription()}</CardDescription>
             </CardHeader>
             <CardContent>
                 <ChartContainer config={chartConfig}>
@@ -99,10 +178,8 @@ const StudentRegionDistribution: React.FC = () => {
                 </ChartContainer>
             </CardContent>
             <CardFooter className="flex-col items-start gap-2 text-sm">
-                <div className="flex gap-2 leading-none font-medium">
-                    Mayoritas dari {largestRegion.name} ({largestRegionPercentage}%)
-                </div>
-                <div className="text-muted-foreground leading-none">{sulawesiPercentage}% mahasiswa berasal dari Pulau Sulawesi</div>
+                <div className="flex gap-2 leading-none font-medium">{getFooterText()}</div>
+                <div className="text-muted-foreground leading-none">{getFooterDescription()}</div>
             </CardFooter>
         </Card>
     );

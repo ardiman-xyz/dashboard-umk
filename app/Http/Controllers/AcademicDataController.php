@@ -92,11 +92,30 @@ class AcademicDataController extends Controller
 
     public function student(Request $request)
     {
-
         $termYearId = $request->input('term_year_id', 'all');
+        $studentStatus = $request->input('student_status', 'all');
 
-        $facultyDistribution = $this->facultyDistributionService->getFacultyDistributionSummary($termYearId);
+        $facultyDistribution = $this->facultyDistributionService->getFacultyDistributionSummary($termYearId, $studentStatus);
+        $genderDistribution = $this->facultyDistributionService->getGenderDistributionByFaculty($termYearId, $studentStatus);
+        $religionDistribution = $this->facultyDistributionService->getReligionDistribution($termYearId, $studentStatus);
+        $ageDistribution = $this->facultyDistributionService->getAgeDistribution($termYearId, $studentStatus);
+        $regionDistribution = $this->facultyDistributionService->getRegionDistribution($termYearId, $studentStatus);
+    
 
-        return Inertia::render("academic/student/index", compact("facultyDistribution"));
+        $currentTerm = $this->termService->getCurrentTerm($termYearId);
+        $availableTerms = $this->termService->getAvailableTerms();
+
+        return Inertia::render("academic/student/index", [
+            'facultyDistribution' => $facultyDistribution,
+            'genderDistribution' => $genderDistribution,
+            'studentStatus' => $studentStatus,
+            'ageDistribution' => $ageDistribution,
+            'regionDistribution' => $regionDistribution,
+            'religionDistribution' => $religionDistribution,
+            'filters' => [
+                'currentTerm' => $currentTerm,
+                'availableTerms' => $availableTerms
+            ]
+        ]);
     }
 }

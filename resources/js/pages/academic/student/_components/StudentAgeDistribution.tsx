@@ -6,7 +6,7 @@ import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from 'recharts';
 interface AgeData {
     age: string;
     value: number;
-    color: string;
+    color?: string;
 }
 
 interface TooltipProps {
@@ -16,9 +16,27 @@ interface TooltipProps {
     }>;
 }
 
-const StudentAgeDistribution: React.FC = () => {
-    // Data distribusi umur
-    const ageData: AgeData[] = [
+const StudentAgeDistribution: React.FC<{
+    ageDistribution?: AgeData[];
+    studentStatus?: string;
+    isAllFilter?: boolean;
+}> = ({ ageDistribution, studentStatus = 'all', isAllFilter = false }) => {
+    // Predefined colors untuk age groups
+    const ageColors = [
+        '#a1cca5', // light green untuk 17-19
+        '#8fb996', // medium green untuk 20-22
+        '#709775', // dark green untuk 23-25
+        '#415d43', // darker green untuk 26-30
+        '#111d13', // darkest green untuk > 30
+    ];
+
+    // Function untuk assign warna berdasarkan index
+    const getColorByIndex = (index: number): string => {
+        return ageColors[index] || ageColors[ageColors.length - 1];
+    };
+
+    // Data fallback jika props tidak tersedia
+    const fallbackData: AgeData[] = [
         { age: '17-19', value: 6243, color: '#a1cca5' },
         { age: '20-22', value: 10785, color: '#8fb996' },
         { age: '23-25', value: 5421, color: '#709775' },
@@ -26,21 +44,87 @@ const StudentAgeDistribution: React.FC = () => {
         { age: '> 30', value: 380, color: '#111d13' },
     ];
 
+    // Gunakan data real jika ada, fallback ke dummy
+    const ageData: AgeData[] =
+        ageDistribution && ageDistribution.length > 0
+            ? ageDistribution.map((item, index) => ({
+                  age: item.age,
+                  value: item.value,
+                  color: item.color || getColorByIndex(index),
+              }))
+            : fallbackData;
+
+    // Dynamic title dan description berdasarkan filter
+    const getChartTitle = () => {
+        if (studentStatus === 'active') {
+            return 'Distribusi Umur Mahasiswa Aktif';
+        }
+        return 'Distribusi Umur Mahasiswa';
+    };
+
+    const getChartDescription = () => {
+        if (studentStatus === 'active') {
+            if (isAllFilter) {
+                return 'Kelompok umur mahasiswa aktif semester saat ini';
+            }
+            return 'Kelompok umur mahasiswa aktif berdasarkan semester';
+        }
+
+        if (isAllFilter) {
+            return 'Jumlah seluruh mahasiswa berdasarkan kelompok umur';
+        }
+        return 'Jumlah mahasiswa berdasarkan kelompok umur';
+    };
+
     // Hitung total dan statistik
     const totalStudents: number = ageData.reduce((sum, item) => sum + item.value, 0);
 
     // Cari kelompok umur terbanyak
-    const largestAgeGroup = [...ageData].sort((a, b) => b.value - a.value)[0];
-    const largestAgeGroupPercentage = ((largestAgeGroup.value / totalStudents) * 100).toFixed(1);
+    const largestAgeGroup = totalStudents > 0 ? [...ageData].sort((a, b) => b.value - a.value)[0] : { age: 'N/A', value: 0 };
 
-    // Hitung rata-rata umur (perkiraan sederhana)
-    // Menggunakan nilai tengah untuk setiap kelompok umur
-    const averageAge = ((6243 * 18 + 10785 * 21 + 5421 * 24 + 1438 * 28 + 380 * 35) / totalStudents).toFixed(1);
+    const largestAgeGroupPercentage = totalStudents > 0 ? ((largestAgeGroup.value / totalStudents) * 100).toFixed(1) : '0';
+
+    // Hitung rata-rata umur berdasarkan data real
+    const calculateAverageAge = () => {
+        if (totalStudents === 0) return '0';
+
+        let totalAge = 0;
+        ageData.forEach((group) => {
+            let midAge = 0;
+
+            // Tentukan nilai tengah untuk setiap kelompok
+            switch (group.age) {
+                case '17-19':
+                    midAge = 18;
+                    break;
+                case '20-22':
+                    midAge = 21;
+                    break;
+                case '23-25':
+                    midAge = 24;
+                    break;
+                case '26-30':
+                    midAge = 28;
+                    break;
+                case '> 30':
+                    midAge = 35; // Estimasi untuk > 30
+                    break;
+                default:
+                    midAge = 22; // Default jika tidak dikenali
+            }
+
+            totalAge += group.value * midAge;
+        });
+
+        return (totalAge / totalStudents).toFixed(1);
+    };
+
+    const averageAge = calculateAverageAge();
 
     // Konfigurasi chart
     const chartConfig = {
         value: {
-            label: 'Jumlah Mahasiswa',
+            label: studentStatus === 'active' ? 'Mahasiswa Aktif' : 'Jumlah Mahasiswa',
             color: 'hsl(var(--chart-3))',
         },
     } satisfies ChartConfig;
@@ -54,12 +138,14 @@ const StudentAgeDistribution: React.FC = () => {
     const CustomTooltip: React.FC<TooltipProps> = ({ active, payload }) => {
         if (active && payload && payload.length > 0) {
             const data = payload[0].payload;
-            const percentage = ((data.value / totalStudents) * 100).toFixed(1);
+            const percentage = totalStudents > 0 ? ((data.value / totalStudents) * 100).toFixed(1) : '0';
 
             return (
                 <div className="bg-background border-border rounded-lg border p-2 shadow-md">
                     <p className="font-medium">Umur {data.age} tahun</p>
-                    <p className="text-sm">{formatNumber(data.value)} mahasiswa</p>
+                    <p className="text-sm">
+                        {formatNumber(data.value)} mahasiswa {studentStatus === 'active' ? 'aktif' : ''}
+                    </p>
                     <p className="text-muted-foreground text-sm">{percentage}% dari total</p>
                 </div>
             );
@@ -67,11 +153,30 @@ const StudentAgeDistribution: React.FC = () => {
         return null;
     };
 
+    // Dynamic footer text
+    const getFooterText = () => {
+        if (totalStudents === 0) return 'Data tidak tersedia';
+
+        if (studentStatus === 'active') {
+            return `Mayoritas mahasiswa aktif umur ${largestAgeGroup.age} tahun (${largestAgeGroupPercentage}%)`;
+        }
+        return `Mayoritas umur ${largestAgeGroup.age} tahun (${largestAgeGroupPercentage}%)`;
+    };
+
+    const getFooterDescription = () => {
+        if (totalStudents === 0) return 'Tidak ada data mahasiswa';
+
+        if (studentStatus === 'active') {
+            return `Rata-rata umur mahasiswa aktif: ${averageAge} tahun`;
+        }
+        return `Rata-rata umur mahasiswa: ${averageAge} tahun`;
+    };
+
     return (
         <Card className="h-[600px]">
             <CardHeader>
-                <CardTitle>Distribusi Umur Mahasiswa</CardTitle>
-                <CardDescription>Jumlah mahasiswa berdasarkan kelompok umur</CardDescription>
+                <CardTitle>{getChartTitle()}</CardTitle>
+                <CardDescription>{getChartDescription()}</CardDescription>
             </CardHeader>
             <CardContent>
                 <ChartContainer config={chartConfig}>
@@ -93,10 +198,8 @@ const StudentAgeDistribution: React.FC = () => {
                 </ChartContainer>
             </CardContent>
             <CardFooter className="flex-col items-start gap-2 text-sm">
-                <div className="flex gap-2 leading-none font-medium">
-                    Mayoritas umur {largestAgeGroup.age} tahun ({largestAgeGroupPercentage}%)
-                </div>
-                <div className="text-muted-foreground leading-none">Rata-rata umur mahasiswa: {averageAge} tahun</div>
+                <div className="flex gap-2 leading-none font-medium">{getFooterText()}</div>
+                <div className="text-muted-foreground leading-none">{getFooterDescription()}</div>
             </CardFooter>
         </Card>
     );
