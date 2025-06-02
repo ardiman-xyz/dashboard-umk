@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip } from '@/components/ui/chart';
+import { router } from '@inertiajs/react'; // Tambahkan import ini
 import { TrendingDown, TrendingUp } from 'lucide-react';
 import React from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
@@ -22,29 +23,97 @@ interface FacultyDistributionProps {
 
 const StudentDistribution: React.FC<{
     facultyDistribution?: FacultyDistributionProps;
-    isAllFilter?: boolean; // Tambahan prop untuk menentukan filter
-    studentStatus?: string; // Tambahan prop untuk status mahasiswa
+    isAllFilter?: boolean;
+    studentStatus?: string;
 }> = ({ facultyDistribution, isAllFilter = false, studentStatus = 'all' }) => {
-    // Data fallback dengan logic untuk filter all
+    // Data fallback dengan logic untuk filter all (tambahkan faculty_id)
     const fallbackData = [
-        { faculty: 'FKIP', current: 380, previous: isAllFilter ? 0 : 340 },
-        { faculty: 'TEKNIK', current: 320, previous: isAllFilter ? 0 : 290 },
-        { faculty: 'EKONOMI DAN BISNIS ISLAM', current: 300, previous: isAllFilter ? 0 : 340 },
-        { faculty: 'HUKUM', current: 240, previous: isAllFilter ? 0 : 220 },
-        { faculty: 'PERIKANAN DAN ILMU KELAUTAN', current: 160, previous: isAllFilter ? 0 : 120 },
-        { faculty: 'AGAMA ISLAM', current: 140, previous: isAllFilter ? 0 : 130 },
-        { faculty: 'ILMU SOSIAL DAN ILMU POLITIK', current: 120, previous: isAllFilter ? 0 : 110 },
-        { faculty: 'PERTANIAN', current: 90, previous: isAllFilter ? 0 : 100 },
+        {
+            faculty: 'FKIP',
+            faculty_id: '1', // Tambahkan faculty_id
+            current: 380,
+            previous: isAllFilter ? 0 : 340,
+        },
+        {
+            faculty: 'TEKNIK',
+            faculty_id: '2', // Tambahkan faculty_id
+            current: 320,
+            previous: isAllFilter ? 0 : 290,
+        },
+        {
+            faculty: 'EKONOMI DAN BISNIS ISLAM',
+            faculty_id: '3', // Tambahkan faculty_id
+            current: 300,
+            previous: isAllFilter ? 0 : 340,
+        },
+        {
+            faculty: 'HUKUM',
+            faculty_id: '4', // Tambahkan faculty_id
+            current: 240,
+            previous: isAllFilter ? 0 : 220,
+        },
+        {
+            faculty: 'PERIKANAN DAN ILMU KELAUTAN',
+            faculty_id: '5', // Tambahkan faculty_id
+            current: 160,
+            previous: isAllFilter ? 0 : 120,
+        },
+        {
+            faculty: 'AGAMA ISLAM',
+            faculty_id: '6', // Tambahkan faculty_id
+            current: 140,
+            previous: isAllFilter ? 0 : 130,
+        },
+        {
+            faculty: 'ILMU SOSIAL DAN ILMU POLITIK',
+            faculty_id: '7', // Tambahkan faculty_id
+            current: 120,
+            previous: isAllFilter ? 0 : 110,
+        },
+        {
+            faculty: 'PERTANIAN',
+            faculty_id: '8', // Tambahkan faculty_id
+            current: 90,
+            previous: isAllFilter ? 0 : 100,
+        },
     ];
 
     // Gunakan data dari fakultyDistribution jika tersedia, jika tidak gunakan fallback
     const chartData = facultyDistribution
         ? facultyDistribution.distribution.map((item) => ({
               faculty: item.faculty_acronym === 'T' ? item.faculty : item.faculty_acronym,
+              faculty_id: item.faculty_id, // Pastikan faculty_id ikut di-map
               current: item.current,
               previous: item.previous,
           }))
         : fallbackData;
+
+    // Function untuk handle click pada bar chart
+    const handleBarClick = (data: any, index: number) => {
+        // Ambil faculty_id dari data yang diklik
+        const clickedData = chartData[index];
+        if (clickedData && clickedData.faculty_id) {
+            // Dapatkan parameter URL saat ini
+            const currentParams = new URLSearchParams(window.location.search);
+            const termYearId = currentParams.get('term_year_id') || 'all';
+            const currentStudentStatus = currentParams.get('student_status') || studentStatus;
+
+            // Navigate ke halaman detail fakultas
+            router.visit(
+                route('academic.faculty.detail', {
+                    facultyId: clickedData.faculty_id,
+                    term_year_id: termYearId,
+                    student_status: currentStudentStatus,
+                }),
+            );
+        }
+    };
+
+    // Function untuk handle click pada area chart (fallback)
+    const handleChartClick = (event: any) => {
+        console.log('Chart area clicked:', event);
+        // Bisa ditambahkan logic tambahan jika diperlukan
+    };
 
     // Dynamic title dan description berdasarkan filter
     const getChartTitle = () => {
@@ -103,7 +172,7 @@ const StudentDistribution: React.FC<{
     } satisfies ChartConfig;
 
     return (
-        <Card>
+        <Card className="cursor-pointer transition-shadow duration-200 hover:shadow-lg">
             <CardHeader>
                 <CardTitle>{getChartTitle()}</CardTitle>
                 <CardDescription>{getChartDescription()}</CardDescription>
@@ -125,7 +194,7 @@ const StudentDistribution: React.FC<{
                         />
                         <YAxis tickLine={false} axisLine={false} domain={[0, 'dataMax + 50']} tickCount={6} />
                         <ChartTooltip
-                            cursor={false}
+                            cursor={{ fill: 'rgba(0, 0, 0, 0.05)' }}
                             content={(props) => {
                                 if (props?.payload && props.payload.length > 0) {
                                     const data = props.payload[0].payload;
@@ -148,6 +217,7 @@ const StudentDistribution: React.FC<{
                                                     </div>
                                                 </>
                                             )}
+                                            <div className="text-muted-foreground mt-1 text-xs italic">Klik untuk melihat detail fakultas</div>
                                         </div>
                                     );
                                 }
@@ -161,6 +231,8 @@ const StudentDistribution: React.FC<{
                             fill="#283618" // Hijau tua (sesuai dengan screenshot)
                             radius={[4, 4, 0, 0]}
                             barSize={20}
+                            onClick={handleBarClick}
+                            style={{ cursor: 'pointer' }}
                         />
 
                         {/* Bar untuk data previous (hanya jika bukan filter 'all' dan bukan status 'active') */}
@@ -170,6 +242,8 @@ const StudentDistribution: React.FC<{
                                 fill="#dda15e" // Cokelat (sesuai dengan screenshot)
                                 radius={[4, 4, 0, 0]}
                                 barSize={20}
+                                onClick={handleBarClick}
+                                style={{ cursor: 'pointer' }}
                             />
                         )}
                     </BarChart>
@@ -197,6 +271,11 @@ const StudentDistribution: React.FC<{
                         <div className="text-muted-foreground leading-none">Menampilkan total mahasiswa per fakultas pada semester ini</div>
                     </>
                 )}
+
+                {/* Tambahkan hint untuk user */}
+                <div className="text-muted-foreground mt-2 flex items-center gap-1 text-xs">
+                    💡 <span>Klik pada bar untuk melihat detail fakultas</span>
+                </div>
             </CardFooter>
         </Card>
     );

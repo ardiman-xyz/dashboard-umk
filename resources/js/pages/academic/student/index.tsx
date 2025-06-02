@@ -12,7 +12,6 @@ import { type BreadcrumbItem } from '@/types';
 import StudentAgeDistribution from './_components/StudentAgeDistribution';
 import StudentDistribution from './_components/StudentDistribution';
 import StudentGenderDistributionByFaculty from './_components/StudentGenderDistributionByFaculty';
-import StudentMainStats from './_components/StudentMainStats';
 import StudentRegionDistribution from './_components/StudentRegionDistribution';
 import StudentReligionDistribution from './_components/StudentReligionDistribution';
 // Import komponen filter yang sudah disederhanakan
@@ -162,7 +161,7 @@ const StudentDetailPage: React.FC<StudentPageProps> = ({
                     </Card>
                 </div>
 
-                <StudentMainStats />
+                {/* <StudentMainStats /> */}
 
                 {/* Distribusi Mahasiswa (Fakultas & Gender) */}
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-2">

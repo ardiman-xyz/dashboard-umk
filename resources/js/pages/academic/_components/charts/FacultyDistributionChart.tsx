@@ -1,7 +1,7 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip } from '@/components/ui/chart';
 import { PageProps } from '@inertiajs/core';
-import { usePage } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import { TrendingDown, TrendingUp } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
@@ -140,6 +140,23 @@ export function FacultyDistributionChart() {
         }
     }, [stats, filters]);
 
+    const handleBarClick = (data: any) => {
+        if (data && data.faculty_id) {
+            // Redirect ke halaman detail fakultas dengan parameter yang sama
+            const currentParams = new URLSearchParams(window.location.search);
+            const termYearId = currentParams.get('term_year_id') || 'all';
+            const studentStatus = currentParams.get('student_status') || 'all';
+
+            router.visit(
+                route('academic.faculty.detail', {
+                    facultyId: data.faculty_id,
+                    term_year_id: termYearId,
+                    student_status: studentStatus,
+                }),
+            );
+        }
+    };
+
     return (
         <Card>
             <CardHeader className="pb-2">
@@ -150,7 +167,16 @@ export function FacultyDistributionChart() {
             </CardHeader>
             <CardContent>
                 <ChartContainer config={chartConfig}>
-                    <BarChart data={chartData} margin={{ left: 0, right: 0, top: 10, bottom: 10 }} barGap={4} layout="vertical" height={300}>
+                    <BarChart
+                        onDoubleClick={() => {
+                            console.info('You clicked the bar...');
+                        }}
+                        data={chartData}
+                        margin={{ left: 0, right: 0, top: 10, bottom: 10 }}
+                        barGap={4}
+                        layout="vertical"
+                        height={300}
+                    >
                         <CartesianGrid horizontal={true} vertical={false} strokeDasharray="3 3" />
                         <YAxis dataKey="faculty" type="category" tickLine={false} axisLine={false} width={100} fontSize={12} />
                         <XAxis type="number" tickLine={false} axisLine={false} tickFormatter={(value) => `${value}`} />
@@ -184,10 +210,28 @@ export function FacultyDistributionChart() {
                         />
 
                         {/* Bar untuk data current (selalu ditampilkan) */}
-                        <Bar dataKey="current" fill={chartConfig.current.color} radius={[0, 4, 4, 0]} maxBarSize={30} />
+                        <Bar
+                            onClick={() => {
+                                console.info('You clicked the bar...');
+                            }}
+                            dataKey="current"
+                            fill={chartConfig.current.color}
+                            radius={[0, 4, 4, 0]}
+                            maxBarSize={30}
+                        />
 
                         {/* Bar untuk data previous (hanya jika bukan filter 'all') */}
-                        {!isAllFilter && <Bar dataKey="previous" fill={chartConfig.previous.color} radius={[0, 4, 4, 0]} maxBarSize={30} />}
+                        {!isAllFilter && (
+                            <Bar
+                                onClick={() => {
+                                    console.info('You clicked the bar...');
+                                }}
+                                dataKey="previous"
+                                fill={chartConfig.previous.color}
+                                radius={[0, 4, 4, 0]}
+                                maxBarSize={30}
+                            />
+                        )}
                     </BarChart>
                 </ChartContainer>
             </CardContent>

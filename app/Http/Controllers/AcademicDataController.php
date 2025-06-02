@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\AverageGpaService;
+use App\Services\FacultyDetailService;
 use App\Services\FacultyDistributionService;
 use App\Services\GpaTrendService;
 use App\Services\GradeDistributionService;
@@ -25,6 +26,7 @@ class AcademicDataController extends Controller
     protected GradeDistributionService $gradeDistributionService;
     protected LecturerRatioService $lecturerRatioService;
     protected LecturerService $lecturerService;
+    protected FacultyDetailService $facultyDetailService;
 
     public function __construct(
         StudentService $studentService, 
@@ -34,7 +36,8 @@ class AcademicDataController extends Controller
         GpaTrendService $gpaTrendService,
         GradeDistributionService $gradeDistributionService,
         LecturerRatioService $lecturerRatioService,
-        LecturerService $lecturerService
+        LecturerService $lecturerService,
+        FacultyDetailService $facultyDetailService
     ) {
         $this->studentService = $studentService;
         $this->averageGpaService = $averageGpaService;
@@ -44,6 +47,7 @@ class AcademicDataController extends Controller
         $this->gradeDistributionService = $gradeDistributionService;
         $this->lecturerRatioService = $lecturerRatioService;
         $this->lecturerService = $lecturerService;
+        $this->facultyDetailService = $facultyDetailService;
     }
 
     public function index(Request $request)
@@ -185,4 +189,40 @@ class AcademicDataController extends Controller
         $termName = $termNames[$term] ?? 'Term ' . $term;
         return $termName . ' ' . $year . '/' . ($year + 1);
     }
+
+
+    /**
+     * Halaman detail fakultas
+     */
+    public function facultyDetail(Request $request, $facultyId)
+    {
+        $termYearId = $request->input('term_year_id', 'all');
+        $studentStatus = $request->input('student_status', 'all');
+        
+        // Ambil informasi fakultas
+        $facultyInfo = $this->facultyDetailService->getFacultyInfo($facultyId);
+        
+        if (!$facultyInfo) {
+            abort(404, 'Fakultas tidak ditemukan');
+        }
+        
+        // Ambil data detail fakultas
+        $facultyDetail = $this->facultyDetailService->getFacultyDetailData($facultyId, $termYearId, $studentStatus);
+        
+        // Ambil data untuk filter
+        $currentTerm = $this->termService->getCurrentTerm($termYearId);
+        $availableTerms = $this->termService->getAvailableTerms();
+        
+        return Inertia::render("academic/detail", [
+            'facultyInfo' => $facultyInfo,
+            'facultyDetail' => $facultyDetail,
+            'filters' => [
+                'currentTerm' => $currentTerm,
+                'availableTerms' => $availableTerms
+            ],
+            'termYearId' => $termYearId,
+            'studentStatus' => $studentStatus
+        ]);
+    }
+
 }
