@@ -11,6 +11,7 @@ use App\Services\LecturerService;
 use App\Services\StudentService;
 use App\Services\TermService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 
 
@@ -90,6 +91,7 @@ class AcademicDataController extends Controller
         ]);
     }
 
+
     public function student(Request $request)
     {
         $termYearId = $request->input('term_year_id', 'all');
@@ -100,10 +102,9 @@ class AcademicDataController extends Controller
         $religionDistribution = $this->facultyDistributionService->getReligionDistribution($termYearId, $studentStatus);
         $ageDistribution = $this->facultyDistributionService->getAgeDistribution($termYearId, $studentStatus);
         $regionDistribution = $this->facultyDistributionService->getRegionDistribution($termYearId, $studentStatus);
-    
 
         $currentTerm = $this->termService->getCurrentTerm($termYearId);
-        $availableTerms = $this->termService->getAvailableTerms();
+        $availableTerms = $this->getFormattedAvailableTerms(); // Updated method
 
         return Inertia::render("academic/student/index", [
             'facultyDistribution' => $facultyDistribution,
@@ -114,8 +115,74 @@ class AcademicDataController extends Controller
             'religionDistribution' => $religionDistribution,
             'filters' => [
                 'currentTerm' => $currentTerm,
-                'availableTerms' => $availableTerms
+                'availableTerms' => $availableTerms,
             ]
         ]);
+    }
+
+    /**
+     * Get formatted available terms with readable names
+     */
+    private function getFormattedAvailableTerms()
+    {
+        // Get terms from database, ordered by most recent first
+        $terms = DB::table('mstr_term_year')
+            ->orderBy('Term_Year_Id', 'desc')
+            ->take(15) // Limit to recent 15 terms
+            ->get(['Term_Year_Id', 'Term_Year_Name']);
+        
+        $formattedTerms = [];
+        
+        foreach ($terms as $term) {
+            $termId = $term->Term_Year_Id;
+            
+            // Use database name if available, otherwise format it
+            $termName = $term->Term_Year_Name ?? $this->formatTermName($termId);
+            
+            // Format like "2024/Gasal", "2023/Semester Pendek Genap", etc.
+            if (strlen($termId) >= 5) {
+                $year = substr($termId, 0, 4);
+                $semester = substr($termId, 4, 1);
+                
+                // Simplified semester naming based on the image
+                $semesterNames = [
+                    '1' => 'Gasal',     // Semester Ganjil = Gasal
+                    '2' => 'Genap',     // Semester Genap = Genap  
+                    '3' => 'Semester Pendek Genap' // Semester Pendek
+                ];
+                
+                $semesterName = $semesterNames[$semester] ?? $termName;
+                $displayName = $year . '/' . $semesterName;
+            } else {
+                $displayName = $termName;
+            }
+            
+            $formattedTerms[] = [
+                'id' => $termId,
+                'name' => $displayName
+            ];
+        }
+        
+        return $formattedTerms;
+    }
+
+    /**
+     * Format term name from ID
+     */
+    private function formatTermName($termYearId)
+    {
+        if (strlen($termYearId) < 5) return $termYearId;
+        
+        $year = (int)substr($termYearId, 0, 4);
+        $term = (int)substr($termYearId, 4, 1);
+        
+        $termNames = [
+            1 => 'Ganjil',
+            2 => 'Genap', 
+            3 => 'Pendek'
+        ];
+        
+        $termName = $termNames[$term] ?? 'Term ' . $term;
+        return $termName . ' ' . $year . '/' . ($year + 1);
     }
 }

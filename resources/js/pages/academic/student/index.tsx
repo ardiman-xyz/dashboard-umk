@@ -1,10 +1,10 @@
 import { PageProps as InertiaPageProps } from '@inertiajs/core';
-import { Head, router, usePage } from '@inertiajs/react';
+import { Head, usePage } from '@inertiajs/react';
 import { ChevronLeft } from 'lucide-react';
 import React, { useState } from 'react';
 
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 
@@ -15,6 +15,8 @@ import StudentGenderDistributionByFaculty from './_components/StudentGenderDistr
 import StudentMainStats from './_components/StudentMainStats';
 import StudentRegionDistribution from './_components/StudentRegionDistribution';
 import StudentReligionDistribution from './_components/StudentReligionDistribution';
+// Import komponen filter yang sudah disederhanakan
+import StudentAcademicFilter from './_components/StudentAcademicFilter';
 
 const breadcrumbs: BreadcrumbItem[] = [
     {
@@ -79,6 +81,10 @@ interface StudentPageProps extends InertiaPageProps {
             id: string;
             name: string;
         };
+        availableTerms?: Array<{
+            id: string;
+            name: string;
+        }>;
     };
     studentStatus?: string;
 }
@@ -103,24 +109,30 @@ const StudentDetailPage: React.FC<StudentPageProps> = ({
     // Handle perubahan filter status mahasiswa
     const handleStudentStatusChange = (value: string) => {
         setCurrentStudentStatus(value);
+        // Tidak perlu redirect di sini karena akan di-handle oleh komponen filter
+    };
 
-        // Redirect dengan parameter baru
-        router.visit(route('academic.student.index'), {
-            data: {
-                student_status: value,
-                term_year_id: filters?.currentTerm?.id || 'all',
-            },
-            preserveState: true,
-        });
+    // Generate page title based on filters
+    const getPageTitle = () => {
+        return 'Data Mahasiswa';
+    };
+
+    // Generate page description based on filters
+    const getPageDescription = () => {
+        if (isAllFilter) {
+            return 'Semua Tahun & Semester';
+        }
+
+        return filters?.currentTerm?.name || 'Analisis data mahasiswa';
     };
 
     return (
         <AppLayout breadcrumbs={breadcrumbs}>
-            <Head title="Detail Mahasiswa" />
+            <Head title={getPageTitle()} />
 
             <div className="mb-60 space-y-6 p-4">
                 {/* Header and Navigation */}
-                <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                <div className="flex flex-col gap-4">
                     <div className="flex items-center gap-2">
                         <Button variant="secondary" size="icon" asChild>
                             <a href="/academic">
@@ -128,24 +140,26 @@ const StudentDetailPage: React.FC<StudentPageProps> = ({
                             </a>
                         </Button>
                         <div>
-                            <h1 className="text-2xl font-bold">Data Mahasiswa</h1>
-                            {filters?.currentTerm && (
-                                <p className="text-muted-foreground text-sm">{isAllFilter ? 'Semua Tahun & Semester' : filters.currentTerm.name}</p>
-                            )}
+                            <h1 className="text-2xl font-bold">{getPageTitle()}</h1>
+                            <p className="text-muted-foreground text-sm">{getPageDescription()}</p>
                         </div>
                     </div>
 
-                    <div>
-                        <Select value={currentStudentStatus} onValueChange={handleStudentStatusChange}>
-                            <SelectTrigger className="w-[180px]">
-                                <SelectValue placeholder="Pilih Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">Semua Mahasiswa</SelectItem>
-                                <SelectItem value="active">Mahasiswa Aktif</SelectItem>
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    {/* Simplified Academic Filter Component */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Filter Data Mahasiswa</CardTitle>
+                            <CardDescription>Pilih periode dan status mahasiswa untuk analisis yang lebih spesifik</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <StudentAcademicFilter
+                                currentTermId={filters?.currentTerm?.id || 'all'}
+                                currentStudentStatus={currentStudentStatus}
+                                availableTerms={filters?.availableTerms || []}
+                                onStudentStatusChange={handleStudentStatusChange}
+                            />
+                        </CardContent>
+                    </Card>
                 </div>
 
                 <StudentMainStats />

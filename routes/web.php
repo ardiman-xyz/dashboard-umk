@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AcademicDataController;
+use App\Http\Controllers\AcademicTermRelationController;
 use App\Http\Controllers\LocationController;
 use App\Http\Controllers\StudentController;
 use Illuminate\Support\Facades\Hash;
@@ -33,6 +34,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::prefix("academic")->name("academic.")->group(function () {
         Route::get("/", [AcademicDataController::class, "index"])->name("index");
         Route::get("students", [AcademicDataController::class, "student"])->name("student.index");
+
+
     });
 
 });
