@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\AverageGpaService;
+use App\Services\DepartmentDetailService;
 use App\Services\FacultyDetailService;
 use App\Services\FacultyDistributionService;
 use App\Services\GpaTrendService;
@@ -27,6 +28,7 @@ class AcademicDataController extends Controller
     protected LecturerRatioService $lecturerRatioService;
     protected LecturerService $lecturerService;
     protected FacultyDetailService $facultyDetailService;
+    protected DepartmentDetailService $departmentDetailService;
 
     public function __construct(
         StudentService $studentService, 
@@ -37,7 +39,8 @@ class AcademicDataController extends Controller
         GradeDistributionService $gradeDistributionService,
         LecturerRatioService $lecturerRatioService,
         LecturerService $lecturerService,
-        FacultyDetailService $facultyDetailService
+        FacultyDetailService $facultyDetailService,
+        DepartmentDetailService $departmentDetailService 
     ) {
         $this->studentService = $studentService;
         $this->averageGpaService = $averageGpaService;
@@ -48,6 +51,7 @@ class AcademicDataController extends Controller
         $this->lecturerRatioService = $lecturerRatioService;
         $this->lecturerService = $lecturerService;
         $this->facultyDetailService = $facultyDetailService;
+        $this->departmentDetailService = $departmentDetailService;
     }
 
     public function index(Request $request)
@@ -223,6 +227,63 @@ class AcademicDataController extends Controller
             'termYearId' => $termYearId,
             'studentStatus' => $studentStatus
         ]);
+    }
+
+    /**
+     * Halaman detail program studi
+     */
+    public function departmentDetail(Request $request, $departmentId)
+    {
+        $termYearId = $request->input('term_year_id', 'all');
+        $studentStatus = $request->input('student_status', 'all');
+        
+        // Ambil informasi program studi
+        $departmentInfo = $this->departmentDetailService->getDepartmentInfo($departmentId);
+        
+        if (!$departmentInfo) {
+            abort(404, 'Program studi tidak ditemukan');
+        }
+        
+        // Ambil data detail program studi
+        $departmentDetail = $this->departmentDetailService->getDepartmentDetailData($departmentId, $termYearId, $studentStatus);
+        
+        // Ambil data untuk filter
+        $currentTerm = $this->termService->getCurrentTerm($termYearId);
+        $availableTerms = $this->termService->getAvailableTerms();
+        
+        return Inertia::render("academic/department/detail", [
+            'departmentInfo' => $departmentInfo,
+            'departmentDetail' => $departmentDetail,
+            'filters' => [
+                'currentTerm' => $currentTerm,
+                'availableTerms' => $availableTerms
+            ],
+            'termYearId' => $termYearId,
+            'studentStatus' => $studentStatus
+        ]);
+    }
+
+    /**
+     * API endpoint untuk daftar mahasiswa program studi
+     */
+    public function departmentStudents(Request $request, $departmentId)
+    {
+        $termYearId = $request->input('term_year_id', 'all');
+        $studentStatus = $request->input('student_status', 'all');
+        $search = $request->input('search', '');
+        $page = $request->input('page', 1);
+        $perPage = $request->input('per_page', 20);
+
+        $students = $this->departmentDetailService->getDepartmentStudents(
+            $departmentId, 
+            $termYearId, 
+            $studentStatus, 
+            $search, 
+            $page, 
+            $perPage
+        );
+
+        return response()->json($students);
     }
 
 }

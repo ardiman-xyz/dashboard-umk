@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip } from '@/components/ui/chart';
+import { router } from '@inertiajs/react';
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis } from 'recharts';
 
 interface DepartmentStat {
@@ -30,7 +31,20 @@ export default function FacultyDepartmentChart({ departmentStats, facultyName }:
         name: dept.Department_Acronym || dept.Department_Name,
         value: dept.student_count,
         fullName: dept.Department_Name,
+        departmentId: dept.Department_Id,
     }));
+
+    const handleBarClick = (data: DepartmentStat, index: number) => {
+        const clickedData = chartData[index];
+
+        if (clickedData && clickedData.departmentId) {
+            router.visit(
+                route('academic.department.detail', {
+                    departmentId: clickedData.departmentId,
+                }),
+            );
+        }
+    };
 
     return (
         <Card>
@@ -63,7 +77,13 @@ export default function FacultyDepartmentChart({ departmentStats, facultyName }:
                                 return null;
                             }}
                         />
-                        <Bar dataKey="value" fill="var(--color-student_count)" radius={[0, 4, 4, 0]} />
+                        <Bar
+                            onClick={handleBarClick}
+                            style={{ cursor: 'pointer' }}
+                            dataKey="value"
+                            fill="var(--color-student_count)"
+                            radius={[0, 4, 4, 0]}
+                        />
                     </BarChart>
                 </ChartContainer>
             </CardContent>

@@ -35,9 +35,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get("/", [AcademicDataController::class, "index"])->name("index");
         Route::get("students", [AcademicDataController::class, "student"])->name("student.index");
 
-        // New
         Route::get("faculty/{facultyId}", [AcademicDataController::class, "facultyDetail"])->name("faculty.detail");
         Route::get("faculty/{facultyId}/students", [AcademicDataController::class, "facultyStudents"])->name("faculty.students");
+
+        Route::get("department/{departmentId}", [AcademicDataController::class, "departmentDetail"])->name("department.detail");
+        Route::get("department/{departmentId}/students", [AcademicDataController::class, "departmentStudents"])->name("department.students");
 
     });
 
