@@ -144,13 +144,17 @@ export default function DepartmentStudentDetail() {
             },
         );
     };
-
-    const formatNumber = (num: number) => {
+    const formatNumber = (num: number | null | undefined): string => {
+        if (num === null || num === undefined || isNaN(num)) {
+            return '0';
+        }
         return num.toLocaleString('id-ID');
     };
 
     const calculateGenderPercentage = () => {
-        const total = departmentDetail.genderDistribution.total;
+        // Gunakan total dari summaryStats untuk konsistensi
+        const total = departmentDetail.summaryStats.total_students;
+
         if (total === 0) return { male: 0, female: 0 };
 
         return {

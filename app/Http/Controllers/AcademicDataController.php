@@ -246,6 +246,7 @@ class AcademicDataController extends Controller
         
         // Ambil data detail program studi
         $departmentDetail = $this->departmentDetailService->getDepartmentDetailData($departmentId, $termYearId, $studentStatus);
+        // dd($departmentDetail);
         
         // Ambil data untuk filter
         $currentTerm = $this->termService->getCurrentTerm($termYearId);

@@ -135,7 +135,10 @@ export default function FacultyStudentDetail() {
         );
     };
 
-    const formatNumber = (num: number) => {
+    const formatNumber = (num: number | null | undefined): string => {
+        if (num === null || num === undefined || isNaN(num)) {
+            return '0';
+        }
         return num.toLocaleString('id-ID');
     };
 
