@@ -14,6 +14,7 @@ use App\Services\StudentService;
 use App\Services\TermService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 
@@ -232,10 +233,19 @@ class AcademicDataController extends Controller
     /**
      * Halaman detail program studi
      */
+
     public function departmentDetail(Request $request, $departmentId)
     {
         $termYearId = $request->input('term_year_id', 'all');
         $studentStatus = $request->input('student_status', 'all');
+        $useCache = $request->input('use_cache', false);
+        
+        // New: Handle URL parameters for UI state
+        $activeTab = $request->input('tab', 'overview');
+        $genderFilter = $request->input('gender', '');
+        
+        // Configure cache for the service
+        $this->departmentDetailService->setCacheEnabled($useCache);
         
         // Ambil informasi program studi
         $departmentInfo = $this->departmentDetailService->getDepartmentInfo($departmentId);
@@ -246,11 +256,12 @@ class AcademicDataController extends Controller
         
         // Ambil data detail program studi
         $departmentDetail = $this->departmentDetailService->getDepartmentDetailData($departmentId, $termYearId, $studentStatus);
-        // dd($departmentDetail);
         
         // Ambil data untuk filter
         $currentTerm = $this->termService->getCurrentTerm($termYearId);
         $availableTerms = $this->termService->getAvailableTerms();
+
+    
         
         return Inertia::render("academic/department/detail", [
             'departmentInfo' => $departmentInfo,
@@ -260,10 +271,13 @@ class AcademicDataController extends Controller
                 'availableTerms' => $availableTerms
             ],
             'termYearId' => $termYearId,
-            'studentStatus' => $studentStatus
+            'studentStatus' => $studentStatus,
+            'useCache' => $useCache,
+            // New: Pass UI state to frontend
+            'initialTab' => $activeTab,
+            'initialGenderFilter' => $genderFilter
         ]);
     }
-
     /**
      * API endpoint untuk daftar mahasiswa program studi
      */
@@ -274,7 +288,11 @@ class AcademicDataController extends Controller
         $search = $request->input('search', '');
         $page = $request->input('page', 1);
         $perPage = $request->input('per_page', 20);
-        $genderFilter = $request->input('gender_filter', null); // New parameter for gender filtering
+        
+        // FIX: Gunakan 'gender' instead of 'gender_filter'
+        $genderFilter = $request->input('gender', null); // Changed from 'gender_filter'
+        $useCache = $request->input('use_cache', false);
+        $this->departmentDetailService->setCacheEnabled($useCache);
 
         $students = $this->departmentDetailService->getDepartmentStudents(
             $departmentId, 
@@ -288,12 +306,11 @@ class AcademicDataController extends Controller
 
         return response()->json([
             'students' => $students,
-            // 'statistics' => $statistics,
             'filters' => [
                 'term_year_id' => $termYearId,
                 'student_status' => $studentStatus,
                 'search' => $search,
-                'gender_filter' => $genderFilter
+                'gender_filter' => $genderFilter // Keep this for response consistency
             ]
         ]);
     }

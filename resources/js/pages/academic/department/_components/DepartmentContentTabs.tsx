@@ -62,6 +62,9 @@ interface DepartmentContentTabsProps {
     departmentId: string;
     termYearId: string;
     studentStatus: string;
+    activeTab?: string;
+    onTabChange?: (tab: string, genderFilter?: string) => void; // Updated to accept gender filter
+    genderFilter?: string;
 }
 
 export default function DepartmentContentTabs({
@@ -70,9 +73,38 @@ export default function DepartmentContentTabs({
     departmentId,
     termYearId,
     studentStatus,
+    activeTab = 'overview',
+    onTabChange,
+    genderFilter,
 }: DepartmentContentTabsProps) {
+    const handleGenderClick = (gender: 'laki' | 'perempuan') => {
+        // Switch to students tab and set gender filter when gender is clicked
+        if (onTabChange) {
+            onTabChange('students', gender); // Pass gender as second parameter
+        }
+    };
+
+    // Add method to generate shareable URL
+    const getShareableURL = (tab: string, genderFilter?: string) => {
+        const url = new URL(window.location.href);
+
+        if (tab !== 'overview') {
+            url.searchParams.set('tab', tab);
+        } else {
+            url.searchParams.delete('tab');
+        }
+
+        if (genderFilter && genderFilter !== '') {
+            url.searchParams.set('gender', genderFilter);
+        } else {
+            url.searchParams.delete('gender');
+        }
+
+        return url.toString();
+    };
+
     return (
-        <Tabs defaultValue="overview" className="w-full">
+        <Tabs value={activeTab} onValueChange={(tab) => onTabChange && onTabChange(tab)} className="w-full">
             <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="overview">Overview</TabsTrigger>
                 <TabsTrigger value="demographics">Demografi</TabsTrigger>
@@ -88,6 +120,7 @@ export default function DepartmentContentTabs({
                     religionDistribution={departmentDetail.religionDistribution}
                     ageDistribution={departmentDetail.ageDistribution}
                     departmentName={departmentName}
+                    onGenderClick={handleGenderClick}
                 />
             </TabsContent>
 
@@ -115,7 +148,12 @@ export default function DepartmentContentTabs({
 
             {/* Students Data Tab */}
             <TabsContent value="students" className="space-y-6">
-                <DepartmentStudentsTable departmentId={departmentId} termYearId={termYearId} studentStatus={studentStatus} />
+                <DepartmentStudentsTable
+                    departmentId={departmentId}
+                    termYearId={termYearId}
+                    studentStatus={studentStatus}
+                    initialGenderFilter={genderFilter}
+                />
             </TabsContent>
         </Tabs>
     );

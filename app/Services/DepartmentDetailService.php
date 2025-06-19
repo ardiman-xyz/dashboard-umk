@@ -481,4 +481,13 @@ class DepartmentDetailService
         
         return $currentTerm ? $currentTerm->Term_Year_Id : '20242';
     }
+
+     /**
+     * Set cache usage
+     */
+    public function setCacheEnabled($enabled = true)
+    {
+        $this->useCache = $enabled;
+        return $this;
+    }
 }

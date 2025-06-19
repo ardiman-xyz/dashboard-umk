@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChartConfig, ChartTooltip } from '@/components/ui/chart';
+import { ChartConfig, ChartContainer, ChartTooltip } from '@/components/ui/chart';
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 
 interface GenderDistribution {
@@ -11,27 +11,41 @@ interface GenderDistribution {
 interface DepartmentGenderChartProps {
     genderDistribution: GenderDistribution;
     departmentName: string;
+    onGenderClick?: (gender: 'laki' | 'perempuan') => void;
 }
 
+const genderColors = ['#3b82f6', '#ec4899']; // Blue for male, Pink for female
+
 const chartConfig = {
-    laki: {
-        label: 'Laki-laki',
-        color: '#3b82f6',
-    },
-    perempuan: {
-        label: 'Perempuan',
-        color: '#ec4899',
+    value: {
+        label: 'Jumlah Mahasiswa',
+        color: 'hsl(var(--chart-1))',
     },
 } satisfies ChartConfig;
 
-export default function DepartmentGenderChart({ genderDistribution, departmentName }: DepartmentGenderChartProps) {
+export default function DepartmentGenderChart({ genderDistribution, departmentName, onGenderClick }: DepartmentGenderChartProps) {
     // Convert string to number jika diperlukan
     const laki = typeof genderDistribution?.laki === 'string' ? parseInt(genderDistribution.laki) : genderDistribution?.laki || 0;
     const perempuan = typeof genderDistribution?.perempuan === 'string' ? parseInt(genderDistribution.perempuan) : genderDistribution?.perempuan || 0;
-    const total = typeof genderDistribution?.total === 'string' ? parseInt(genderDistribution.total) : genderDistribution?.total || laki + perempuan;
+    const total = laki + perempuan;
 
     // Handle case jika data tidak tersedia atau kosong
     const hasValidData = total > 0;
+
+    // Handle pie click
+    const handlePieClick = (data: any) => {
+        if (onGenderClick && data) {
+            const gender = data.name === 'Laki-laki' ? 'laki' : 'perempuan';
+            onGenderClick(gender);
+        }
+    };
+
+    // Handle legend click
+    const handleLegendClick = (gender: 'laki' | 'perempuan') => {
+        if (onGenderClick) {
+            onGenderClick(gender);
+        }
+    };
 
     if (!hasValidData) {
         return (
@@ -53,12 +67,12 @@ export default function DepartmentGenderChart({ genderDistribution, departmentNa
         {
             name: 'Laki-laki',
             value: laki,
-            color: '#3b82f6',
+            color: genderColors[0],
         },
         {
             name: 'Perempuan',
             value: perempuan,
-            color: '#ec4899',
+            color: genderColors[1],
         },
     ].filter((item) => item.value > 0);
 
@@ -69,13 +83,18 @@ export default function DepartmentGenderChart({ genderDistribution, departmentNa
     const dominantPercentage = laki > perempuan ? malePercentage : femalePercentage;
 
     return (
-        <Card>
+        <Card className={onGenderClick ? 'transition-shadow hover:shadow-lg' : ''}>
             <CardHeader>
                 <CardTitle>Distribusi Jenis Kelamin</CardTitle>
-                <CardDescription>Perbandingan mahasiswa laki-laki dan perempuan di {departmentName}</CardDescription>
+                <CardDescription>
+                    Perbandingan mahasiswa laki-laki dan perempuan di {departmentName}
+                    {onGenderClick && (
+                        <span className="mt-1 block text-xs text-blue-600">💡 Klik pada chart untuk filter data mahasiswa berdasarkan gender</span>
+                    )}
+                </CardDescription>
             </CardHeader>
             <CardContent className="pb-4">
-                <div className="h-[300px] w-full">
+                <ChartContainer config={chartConfig} className="mx-auto aspect-square max-h-[250px]">
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                             <Pie
@@ -84,13 +103,20 @@ export default function DepartmentGenderChart({ genderDistribution, departmentNa
                                 cy="50%"
                                 outerRadius={80}
                                 innerRadius={30}
-                                paddingAngle={2}
+                                paddingAngle={1}
                                 dataKey="value"
                                 labelLine={false}
-                                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                label={({ percent }) => (percent > 5 ? `${(percent * 100).toFixed(0)}%` : '')}
+                                onClick={handlePieClick}
+                                className={onGenderClick ? 'cursor-pointer' : ''}
+                                cursor={'pointer'}
                             >
                                 {chartData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                    <Cell
+                                        key={`cell-${index}`}
+                                        fill={entry.color}
+                                        className={onGenderClick ? 'cursor-pointer hover:opacity-80' : ''}
+                                    />
                                 ))}
                             </Pie>
                             <ChartTooltip
@@ -105,6 +131,7 @@ export default function DepartmentGenderChart({ genderDistribution, departmentNa
                                                 <p className="text-sm">
                                                     {data.value.toLocaleString()} mahasiswa ({percentage}%)
                                                 </p>
+                                                {onGenderClick && <p className="mt-1 text-xs text-blue-600">Klik untuk filter</p>}
                                             </div>
                                         );
                                     }
@@ -113,18 +140,27 @@ export default function DepartmentGenderChart({ genderDistribution, departmentNa
                             />
                         </PieChart>
                     </ResponsiveContainer>
-                </div>
+                </ChartContainer>
 
                 {/* Legend */}
-                <div className="mt-4 flex justify-center gap-6">
-                    <div className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full bg-blue-500" />
-                        <span className="text-sm">Laki-laki ({malePercentage}%)</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                        <div className="h-3 w-3 rounded-full bg-pink-500" />
-                        <span className="text-sm">Perempuan ({femalePercentage}%)</span>
-                    </div>
+                <div className="mt-4 grid grid-cols-2 gap-2">
+                    {chartData.map((item) => {
+                        const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : '0';
+                        const gender = item.name === 'Laki-laki' ? 'laki' : 'perempuan';
+
+                        return (
+                            <div
+                                key={item.name}
+                                className={`flex items-center gap-2 ${onGenderClick ? 'cursor-pointer rounded p-2 transition-colors hover:bg-gray-50' : ''}`}
+                                onClick={() => handleLegendClick(gender)}
+                            >
+                                <div className="h-3 w-3 flex-shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
+                                <span className="truncate text-xs">
+                                    {item.name} ({percentage}%)
+                                </span>
+                            </div>
+                        );
+                    })}
                 </div>
             </CardContent>
             <CardFooter className="flex-col items-start gap-2 text-sm">
