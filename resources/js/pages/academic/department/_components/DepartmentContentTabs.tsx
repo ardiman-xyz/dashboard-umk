@@ -63,7 +63,7 @@ interface DepartmentContentTabsProps {
     termYearId: string;
     studentStatus: string;
     activeTab?: string;
-    onTabChange?: (tab: string, genderFilter?: string) => void; // Updated to accept gender filter
+    onTabChange?: (tab: string, genderFilter?: string) => void;
     genderFilter?: string;
 }
 
@@ -84,25 +84,6 @@ export default function DepartmentContentTabs({
         }
     };
 
-    // Add method to generate shareable URL
-    const getShareableURL = (tab: string, genderFilter?: string) => {
-        const url = new URL(window.location.href);
-
-        if (tab !== 'overview') {
-            url.searchParams.set('tab', tab);
-        } else {
-            url.searchParams.delete('tab');
-        }
-
-        if (genderFilter && genderFilter !== '') {
-            url.searchParams.set('gender', genderFilter);
-        } else {
-            url.searchParams.delete('gender');
-        }
-
-        return url.toString();
-    };
-
     return (
         <Tabs value={activeTab} onValueChange={(tab) => onTabChange && onTabChange(tab)} className="w-full">
             <TabsList className="grid w-full grid-cols-4">
@@ -120,6 +101,9 @@ export default function DepartmentContentTabs({
                     religionDistribution={departmentDetail.religionDistribution}
                     ageDistribution={departmentDetail.ageDistribution}
                     departmentName={departmentName}
+                    departmentId={departmentId} // Pass departmentId
+                    termYearId={termYearId} // Pass termYearId
+                    studentStatus={studentStatus} // Pass studentStatus
                     onGenderClick={handleGenderClick}
                 />
             </TabsContent>

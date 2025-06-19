@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip } from '@/components/ui/chart';
+import { router } from '@inertiajs/react';
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 
 interface GenderDistribution {
@@ -11,6 +12,9 @@ interface GenderDistribution {
 interface DepartmentGenderChartProps {
     genderDistribution: GenderDistribution;
     departmentName: string;
+    departmentId: string; // Add departmentId prop
+    termYearId: string; // Add termYearId prop
+    studentStatus: string; // Add studentStatus prop
     onGenderClick?: (gender: 'laki' | 'perempuan') => void;
 }
 
@@ -23,7 +27,14 @@ const chartConfig = {
     },
 } satisfies ChartConfig;
 
-export default function DepartmentGenderChart({ genderDistribution, departmentName, onGenderClick }: DepartmentGenderChartProps) {
+export default function DepartmentGenderChart({
+    genderDistribution,
+    departmentName,
+    departmentId,
+    termYearId,
+    studentStatus,
+    onGenderClick,
+}: DepartmentGenderChartProps) {
     // Convert string to number jika diperlukan
     const laki = typeof genderDistribution?.laki === 'string' ? parseInt(genderDistribution.laki) : genderDistribution?.laki || 0;
     const perempuan = typeof genderDistribution?.perempuan === 'string' ? parseInt(genderDistribution.perempuan) : genderDistribution?.perempuan || 0;
@@ -32,19 +43,48 @@ export default function DepartmentGenderChart({ genderDistribution, departmentNa
     // Handle case jika data tidak tersedia atau kosong
     const hasValidData = total > 0;
 
-    // Handle pie click
+    // Handle pie click dengan navigation ke URL
     const handlePieClick = (data: any) => {
-        if (onGenderClick && data) {
+        if (data) {
             const gender = data.name === 'Laki-laki' ? 'laki' : 'perempuan';
-            onGenderClick(gender);
+
+            // Update URL dengan parameter tab dan gender
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', 'students');
+            url.searchParams.set('gender', gender);
+
+            // Navigate to the new URL
+            router.visit(url.toString(), {
+                preserveState: true,
+                replace: true,
+                onSuccess: () => {
+                    // Call the onGenderClick callback if provided
+                    if (onGenderClick) {
+                        onGenderClick(gender);
+                    }
+                },
+            });
         }
     };
 
-    // Handle legend click
+    // Handle legend click dengan navigation
     const handleLegendClick = (gender: 'laki' | 'perempuan') => {
-        if (onGenderClick) {
-            onGenderClick(gender);
-        }
+        // Update URL dengan parameter tab dan gender
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', 'students');
+        url.searchParams.set('gender', gender);
+
+        // Navigate to the new URL
+        router.visit(url.toString(), {
+            preserveState: true,
+            replace: true,
+            onSuccess: () => {
+                // Call the onGenderClick callback if provided
+                if (onGenderClick) {
+                    onGenderClick(gender);
+                }
+            },
+        });
     };
 
     if (!hasValidData) {
@@ -83,14 +123,12 @@ export default function DepartmentGenderChart({ genderDistribution, departmentNa
     const dominantPercentage = laki > perempuan ? malePercentage : femalePercentage;
 
     return (
-        <Card className={onGenderClick ? 'transition-shadow hover:shadow-lg' : ''}>
+        <Card className="transition-shadow hover:shadow-lg">
             <CardHeader>
                 <CardTitle>Distribusi Jenis Kelamin</CardTitle>
                 <CardDescription>
                     Perbandingan mahasiswa laki-laki dan perempuan di {departmentName}
-                    {onGenderClick && (
-                        <span className="mt-1 block text-xs text-blue-600">💡 Klik pada chart untuk filter data mahasiswa berdasarkan gender</span>
-                    )}
+                    <span className="mt-1 block text-xs text-blue-600">💡 Klik pada chart untuk melihat data mahasiswa berdasarkan gender</span>
                 </CardDescription>
             </CardHeader>
             <CardContent className="pb-4">
@@ -108,15 +146,11 @@ export default function DepartmentGenderChart({ genderDistribution, departmentNa
                                 labelLine={false}
                                 label={({ percent }) => (percent > 5 ? `${(percent * 100).toFixed(0)}%` : '')}
                                 onClick={handlePieClick}
-                                className={onGenderClick ? 'cursor-pointer' : ''}
-                                cursor={'pointer'}
+                                className="cursor-pointer"
+                                cursor="pointer"
                             >
                                 {chartData.map((entry, index) => (
-                                    <Cell
-                                        key={`cell-${index}`}
-                                        fill={entry.color}
-                                        className={onGenderClick ? 'cursor-pointer hover:opacity-80' : ''}
-                                    />
+                                    <Cell key={`cell-${index}`} fill={entry.color} className="cursor-pointer transition-opacity hover:opacity-80" />
                                 ))}
                             </Pie>
                             <ChartTooltip
@@ -131,7 +165,7 @@ export default function DepartmentGenderChart({ genderDistribution, departmentNa
                                                 <p className="text-sm">
                                                     {data.value.toLocaleString()} mahasiswa ({percentage}%)
                                                 </p>
-                                                {onGenderClick && <p className="mt-1 text-xs text-blue-600">Klik untuk filter</p>}
+                                                <p className="mt-1 text-xs text-blue-600">Klik untuk filter data mahasiswa</p>
                                             </div>
                                         );
                                     }
@@ -142,7 +176,7 @@ export default function DepartmentGenderChart({ genderDistribution, departmentNa
                     </ResponsiveContainer>
                 </ChartContainer>
 
-                {/* Legend */}
+                {/* Interactive Legend */}
                 <div className="mt-4 grid grid-cols-2 gap-2">
                     {chartData.map((item) => {
                         const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : '0';
@@ -151,7 +185,7 @@ export default function DepartmentGenderChart({ genderDistribution, departmentNa
                         return (
                             <div
                                 key={item.name}
-                                className={`flex items-center gap-2 ${onGenderClick ? 'cursor-pointer rounded p-2 transition-colors hover:bg-gray-50' : ''}`}
+                                className="flex cursor-pointer items-center gap-2 rounded p-2 transition-colors hover:bg-gray-50"
                                 onClick={() => handleLegendClick(gender)}
                             >
                                 <div className="h-3 w-3 flex-shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
@@ -170,6 +204,7 @@ export default function DepartmentGenderChart({ genderDistribution, departmentNa
                 <div className="text-muted-foreground">
                     Total {total.toLocaleString()} mahasiswa ({laki.toLocaleString()} L, {perempuan.toLocaleString()} P)
                 </div>
+                <div className="text-xs text-blue-600 italic">Klik pada chart atau legend untuk melihat detail mahasiswa berdasarkan gender</div>
             </CardFooter>
         </Card>
     );

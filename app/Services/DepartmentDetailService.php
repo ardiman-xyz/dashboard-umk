@@ -385,24 +385,24 @@ class DepartmentDetailService
       /**
      * Mendapatkan daftar mahasiswa dengan pagination
      */
-    public function getDepartmentStudents($departmentId, $termYearId, $studentStatus, $search, $page, $perPage)
+    public function getDepartmentStudents($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter)
     {
         // Don't cache paginated results with search, only cache when no search
         if (!$this->useCache || !empty($search)) {
-            return $this->executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage);
+            return $this->executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter);
         }
 
-        $cacheKey = "department-students-{$departmentId}-{$termYearId}-{$studentStatus}-{$page}-{$perPage}";
+        $cacheKey = "department-students-{$departmentId}-{$termYearId}-{$studentStatus}-{$page}-{$perPage}-{$genderFilter}";
         
-        return Cache::remember($cacheKey, $this->cacheDuration, function () use ($departmentId, $termYearId, $studentStatus, $search, $page, $perPage) {
-            return $this->executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage);
+        return Cache::remember($cacheKey, $this->cacheDuration, function () use ($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter) {
+            return $this->executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter);
         });
     }
     
     /**
      * Execute department students query
      */
-    private function executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage)
+    private function executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter = null)
     {
         $query = DB::table('acd_student')
             ->where('acd_student.Department_Id', $departmentId);
@@ -414,8 +414,8 @@ class DepartmentDetailService
                 : $termYearId;
             
             $query->join('acd_student_krs', 'acd_student.Student_Id', '=', 'acd_student_krs.Student_Id')
-                  ->where('acd_student_krs.Term_Year_Id', $currentTermId)
-                  ->where('acd_student_krs.Is_Approved', '1');
+                ->where('acd_student_krs.Term_Year_Id', $currentTermId)
+                ->where('acd_student_krs.Is_Approved', '1');
         } elseif ($termYearId !== 'all' && $termYearId !== null) {
             $year = substr($termYearId, 0, 4);
             $query->where('acd_student.Entry_Year_Id', 'like', $year . '%');
@@ -425,18 +425,33 @@ class DepartmentDetailService
         if ($search) {
             $query->where(function($q) use ($search) {
                 $q->where('acd_student.Full_Name', 'like', "%{$search}%")
-                  ->orWhere('acd_student.Student_Id', 'like', "%{$search}%");
+                ->orWhere('acd_student.Student_Id', 'like', "%{$search}%");
             });
+        }
+        
+        if ($genderFilter) {
+            $genderId = null;
+            if ($genderFilter === 'laki') {
+                $genderId = 1;
+            } elseif ($genderFilter === 'perempuan') {
+                $genderId = 2;
+            }
+            
+            if ($genderId) {
+                $query->where('acd_student.Gender_Id', $genderId);
+            }
+            
         }
         
         $total = $query->count();
         
         $students = $query->select(
                 'acd_student.Student_Id',
-                'acd_student.Full_Name', // Alias to match frontend
+                'acd_student.Full_Name',
                 'acd_student.Entry_Year_Id',
                 'acd_student.Register_Status_Id',
                 'acd_student.Gender_Id',
+                'acd_student.Nim',
                 DB::raw('CASE 
                     WHEN acd_student.Register_Status_Id = "A" THEN "Aktif"
                     WHEN acd_student.Register_Status_Id = "C" THEN "Cuti"
@@ -454,6 +469,8 @@ class DepartmentDetailService
             ->limit($perPage)
             ->orderBy('acd_student.Full_Name')
             ->get();
+            
+        
             
         return [
             'data' => $students,

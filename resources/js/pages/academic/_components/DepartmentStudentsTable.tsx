@@ -1,6 +1,7 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { router } from '@inertiajs/react'; // Import router from Inertia
 import axios from 'axios';
 import { Search, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
@@ -8,7 +9,7 @@ import { useEffect, useState } from 'react';
 interface Student {
     Student_Id: string;
     Full_Name: string;
-    Entry_Year_Id: string | number; // Allow both string and number
+    Entry_Year_Id: string | number;
     Register_Status_Id: string;
     Gender_Id: number;
     Status_Name: string;
@@ -32,7 +33,7 @@ interface DepartmentStudentsTableProps {
     departmentId: string;
     termYearId: string;
     studentStatus: string;
-    initialGenderFilter?: string; // Add this prop
+    initialGenderFilter?: string;
 }
 
 export default function DepartmentStudentsTable({ departmentId, termYearId, studentStatus, initialGenderFilter }: DepartmentStudentsTableProps) {
@@ -41,43 +42,195 @@ export default function DepartmentStudentsTable({ departmentId, termYearId, stud
     const [search, setSearch] = useState('');
     const [genderFilter, setGenderFilter] = useState(initialGenderFilter || '');
     const [currentPage, setCurrentPage] = useState(1);
+    const [debounceTimeout, setDebounceTimeout] = useState<NodeJS.Timeout | null>(null);
 
-    const loadStudents = async (page = 1) => {
+    // Method 1: Update URL using Inertia router (Recommended)
+    const updateURLWithInertia = (newGenderFilter: string, newSearch: string = search) => {
+        const currentParams = new URLSearchParams(window.location.search);
+
+        // Build new params
+        const params: any = {
+            departmentId: departmentId,
+            term_year_id: termYearId,
+            student_status: studentStatus,
+        };
+
+        // Preserve tab parameter
+        if (currentParams.get('tab')) {
+            params.tab = currentParams.get('tab');
+        }
+
+        // Add gender filter if not empty
+        if (newGenderFilter && newGenderFilter !== '') {
+            params.gender = newGenderFilter;
+        }
+
+        // Add search if not empty
+        if (newSearch && newSearch.trim() !== '') {
+            params.search = newSearch.trim();
+        }
+
+        // Use Inertia router to update URL
+        router.visit(route('academic.department.detail', params), {
+            preserveState: true,
+            replace: true,
+            only: [], // Don't reload any data, just update URL
+            onSuccess: () => {
+                console.log('URL updated successfully');
+            },
+        });
+    };
+
+    // Method 2: Update URL using window.history (Alternative)
+    const updateURLWithHistory = (newGenderFilter: string, newSearch: string = search) => {
+        const url = new URL(window.location.href);
+
+        // Update gender parameter
+        if (newGenderFilter && newGenderFilter !== '') {
+            url.searchParams.set('gender', newGenderFilter);
+        } else {
+            url.searchParams.delete('gender');
+        }
+
+        // Update search parameter
+        if (newSearch && newSearch.trim() !== '') {
+            url.searchParams.set('search', newSearch.trim());
+        } else {
+            url.searchParams.delete('search');
+        }
+
+        // Update URL without page reload
+        window.history.replaceState({}, '', url.toString());
+    };
+
+    // Backend filtering function
+    const loadStudents = async (page = 1, searchQuery = '', selectedGender = '') => {
         try {
             setLoading(true);
+
+            const params: any = {
+                term_year_id: termYearId,
+                student_status: studentStatus,
+                page: page,
+                per_page: 20,
+            };
+
+            if (searchQuery.trim()) {
+                params.search = searchQuery.trim();
+            }
+
+            if (selectedGender && selectedGender !== '') {
+                params.gender = selectedGender;
+            }
+
+            console.log('API Request params:', params);
+
             const response = await axios.get(`/academic/department/${departmentId}/students`, {
-                params: {
-                    term_year_id: termYearId,
-                    student_status: studentStatus,
-                    search: search,
-                    gender_filter: genderFilter || undefined,
-                    page: page,
-                    per_page: 20,
-                },
+                params,
             });
 
-            // Extract students data from API response
             const apiResponse: ApiResponse = response.data;
             setStudents(apiResponse.students);
             setCurrentPage(parseInt(apiResponse.students.current_page.toString()));
         } catch (error) {
             console.error('Error loading students:', error);
+            setStudents({
+                data: [],
+                total: 0,
+                per_page: 20,
+                current_page: 1,
+                last_page: 1,
+            });
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        loadStudents(1);
-    }, [departmentId, termYearId, studentStatus, search, genderFilter]);
+    // Handle gender filter change with URL update
+    const handleGenderFilterChange = (selectedGender: string) => {
+        console.log('Gender filter changed to:', selectedGender);
 
-    // Update gender filter when initialGenderFilter changes (from chart click)
+        setGenderFilter(selectedGender);
+        setCurrentPage(1);
+
+        // Update URL immediately when filter changes
+        updateURLWithInertia(selectedGender); // Use Method 1
+        // OR use: updateURLWithHistory(selectedGender); // Use Method 2
+
+        // Load new data
+        loadStudents(1, search, selectedGender);
+    };
+
+    // Handle search input change with debouncing
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const newSearch = e.target.value;
+        setSearch(newSearch);
+
+        // Clear previous timeout
+        if (debounceTimeout) {
+            clearTimeout(debounceTimeout);
+        }
+
+        // Set new timeout for debounced search
+        const timeout = setTimeout(() => {
+            setCurrentPage(1);
+            updateURLWithInertia(genderFilter, newSearch); // Update URL with search
+            loadStudents(1, newSearch, genderFilter);
+        }, 500);
+
+        setDebounceTimeout(timeout);
+    };
+
+    // Clear all filters
+    const clearFilters = () => {
+        setSearch('');
+        setGenderFilter('');
+        setCurrentPage(1);
+
+        // Update URL by removing filter parameters
+        updateURLWithInertia('', '');
+
+        // Load data without filters
+        loadStudents(1, '', '');
+    };
+
+    // Handle pagination with URL update
+    const handlePageChange = (page: number) => {
+        setCurrentPage(page);
+
+        // Update URL with new page (optional, if you want page in URL)
+        const url = new URL(window.location.href);
+        if (page > 1) {
+            url.searchParams.set('page', page.toString());
+        } else {
+            url.searchParams.delete('page');
+        }
+        window.history.replaceState({}, '', url.toString());
+
+        loadStudents(page, search, genderFilter);
+    };
+
+    // Initial load and when dependencies change
     useEffect(() => {
-        if (initialGenderFilter && initialGenderFilter !== genderFilter) {
-            setGenderFilter(initialGenderFilter);
+        loadStudents(1, search, genderFilter);
+    }, [departmentId, termYearId, studentStatus]);
+
+    // Update local state when prop changes (from chart click)
+    useEffect(() => {
+        if (initialGenderFilter !== genderFilter) {
+            setGenderFilter(initialGenderFilter || '');
             setCurrentPage(1);
         }
     }, [initialGenderFilter]);
+
+    // Cleanup timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (debounceTimeout) {
+                clearTimeout(debounceTimeout);
+            }
+        };
+    }, [debounceTimeout]);
 
     const getStatusBadgeVariant = (status: string) => {
         switch (status) {
@@ -118,26 +271,36 @@ export default function DepartmentStudentsTable({ departmentId, termYearId, stud
                     <Users className="h-5 w-5" />
                     Data Mahasiswa Program Studi
                 </CardTitle>
-                <CardDescription>Daftar lengkap mahasiswa dengan fitur pencarian dan pagination</CardDescription>
+                <CardDescription>Daftar lengkap mahasiswa dengan fitur pencarian dan filter</CardDescription>
             </CardHeader>
             <CardContent>
-                {/* Filter Info Banner */}
-                {genderFilter && (
+                {/* Active Filter Banner */}
+                {(genderFilter || search) && (
                     <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
                                 <div className="text-blue-600">
-                                    🔍 Filter aktif: Menampilkan mahasiswa <strong>{genderFilter === 'laki' ? 'Laki-laki' : 'Perempuan'}</strong>
+                                    🔍 Filter aktif:
+                                    {genderFilter && (
+                                        <span className="ml-1">
+                                            <strong>{genderFilter === 'laki' ? 'Laki-laki' : 'Perempuan'}</strong>
+                                        </span>
+                                    )}
+                                    {search && (
+                                        <span className="ml-1">
+                                            Pencarian: <strong>"{search}"</strong>
+                                        </span>
+                                    )}
                                 </div>
                             </div>
-                            <button onClick={() => setGenderFilter('')} className="text-sm text-blue-600 underline hover:text-blue-800">
-                                Hapus filter
+                            <button onClick={clearFilters} className="text-sm text-blue-600 underline hover:text-blue-800">
+                                Hapus semua filter
                             </button>
                         </div>
                     </div>
                 )}
 
-                {/* Search and Filter */}
+                {/* Search and Filter Controls */}
                 <div className="mb-6 flex flex-col gap-4 md:flex-row">
                     <div className="flex-1">
                         <div className="relative">
@@ -146,23 +309,50 @@ export default function DepartmentStudentsTable({ departmentId, termYearId, stud
                                 type="text"
                                 placeholder="Cari nama atau NIM mahasiswa..."
                                 value={search}
-                                onChange={(e) => setSearch(e.target.value)}
+                                onChange={handleSearchChange}
                                 className="w-full rounded-md border border-gray-300 py-2 pr-4 pl-10 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                             />
                         </div>
                     </div>
-                    <div className="w-full md:w-48">
-                        <select
-                            value={genderFilter}
-                            onChange={(e) => setGenderFilter(e.target.value)}
-                            className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="">Semua Gender</option>
-                            <option value="laki">Laki-laki</option>
-                            <option value="perempuan">Perempuan</option>
-                        </select>
+
+                    <div className="flex gap-2">
+                        {/* UPDATED: Gender filter dropdown with URL sync */}
+                        <div className="w-full md:w-48">
+                            <select
+                                value={genderFilter}
+                                onChange={(e) => handleGenderFilterChange(e.target.value)} // Updated handler
+                                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                            >
+                                <option value="">Semua Gender</option>
+                                <option value="laki">Laki-laki</option>
+                                <option value="perempuan">Perempuan</option>
+                            </select>
+                        </div>
+
+                        {(search || genderFilter) && (
+                            <Button variant="outline" onClick={clearFilters}>
+                                Reset Filter
+                            </Button>
+                        )}
                     </div>
                 </div>
+
+                {/* Loading state for subsequent requests */}
+                {loading && students && (
+                    <div className="mb-4 flex items-center justify-center p-4">
+                        <div className="border-primary h-6 w-6 animate-spin rounded-full border-b-2"></div>
+                        <span className="ml-2">Memuat...</span>
+                    </div>
+                )}
+
+                {/* Results summary */}
+                {students && students.total > 0 && (
+                    <div className="mb-4 text-sm text-gray-600">
+                        Menampilkan {students.data.length} dari {formatNumber(students.total)} mahasiswa
+                        {search && ` untuk pencarian "${search}"`}
+                        {genderFilter && ` dengan filter ${genderFilter === 'laki' ? 'Laki-laki' : 'Perempuan'}`}
+                    </div>
+                )}
 
                 {/* Table */}
                 <div className="overflow-hidden rounded-lg border">
@@ -210,7 +400,12 @@ export default function DepartmentStudentsTable({ departmentId, termYearId, stud
                             {formatNumber(students.total)} data
                         </div>
                         <div className="flex gap-2">
-                            <Button variant="outline" size="sm" onClick={() => loadStudents(currentPage - 1)} disabled={currentPage <= 1 || loading}>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handlePageChange(currentPage - 1)}
+                                disabled={currentPage <= 1 || loading}
+                            >
                                 Previous
                             </Button>
 
@@ -221,7 +416,7 @@ export default function DepartmentStudentsTable({ departmentId, termYearId, stud
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => loadStudents(currentPage + 1)}
+                                onClick={() => handlePageChange(currentPage + 1)}
                                 disabled={currentPage >= students.last_page || loading}
                             >
                                 Next
@@ -234,10 +429,12 @@ export default function DepartmentStudentsTable({ departmentId, termYearId, stud
                 {students && students.data.length === 0 && (
                     <div className="py-12 text-center">
                         <Users className="mx-auto mb-4 h-12 w-12 text-gray-400" />
-                        <p className="text-gray-500">Tidak ada data mahasiswa</p>
-                        {search && (
-                            <button onClick={() => setSearch('')} className="mt-2 text-sm text-blue-600 hover:text-blue-800">
-                                Hapus pencarian
+                        <p className="text-gray-500">
+                            {search || genderFilter ? 'Tidak ada mahasiswa yang sesuai dengan filter' : 'Tidak ada data mahasiswa'}
+                        </p>
+                        {(search || genderFilter) && (
+                            <button onClick={clearFilters} className="mt-2 text-sm text-blue-600 hover:text-blue-800">
+                                Reset semua filter
                             </button>
                         )}
                     </div>

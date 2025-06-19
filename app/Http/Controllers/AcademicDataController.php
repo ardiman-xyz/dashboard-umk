@@ -238,7 +238,7 @@ class AcademicDataController extends Controller
     {
         $termYearId = $request->input('term_year_id', 'all');
         $studentStatus = $request->input('student_status', 'all');
-        $useCache = $request->input('use_cache', false);
+        $useCache = $request->input('use_cache', true);
         
         // New: Handle URL parameters for UI state
         $activeTab = $request->input('tab', 'overview');
@@ -291,8 +291,9 @@ class AcademicDataController extends Controller
         
         // FIX: Gunakan 'gender' instead of 'gender_filter'
         $genderFilter = $request->input('gender', null); // Changed from 'gender_filter'
-        $useCache = $request->input('use_cache', false);
+        $useCache = $request->input('use_cache', true);
         $this->departmentDetailService->setCacheEnabled($useCache);
+        
 
         $students = $this->departmentDetailService->getDepartmentStudents(
             $departmentId, 

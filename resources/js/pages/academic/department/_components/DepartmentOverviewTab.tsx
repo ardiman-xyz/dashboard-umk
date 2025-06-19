@@ -30,6 +30,9 @@ interface DepartmentOverviewTabProps {
     religionDistribution: ReligionData[];
     ageDistribution: AgeData[];
     departmentName: string;
+    departmentId: string; // Add this prop
+    termYearId: string; // Add this prop
+    studentStatus: string; // Add this prop
     onGenderClick?: (gender: 'laki' | 'perempuan') => void;
 }
 
@@ -39,12 +42,22 @@ export default function DepartmentOverviewTab({
     religionDistribution,
     ageDistribution,
     departmentName,
+    departmentId, // Add this
+    termYearId, // Add this
+    studentStatus, // Add this
     onGenderClick,
 }: DepartmentOverviewTabProps) {
     return (
         <div className="space-y-6">
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <DepartmentGenderChart genderDistribution={genderDistribution} departmentName={departmentName} onGenderClick={onGenderClick} />
+                <DepartmentGenderChart
+                    genderDistribution={genderDistribution}
+                    departmentName={departmentName}
+                    departmentId={departmentId} // Pass departmentId
+                    termYearId={termYearId} // Pass termYearId
+                    studentStatus={studentStatus} // Pass studentStatus
+                    onGenderClick={onGenderClick}
+                />
                 <DepartmentYearDistributionChart yearDistribution={yearDistribution} departmentName={departmentName} />
             </div>
 
