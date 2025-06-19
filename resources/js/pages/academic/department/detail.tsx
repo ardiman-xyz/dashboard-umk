@@ -152,7 +152,6 @@ export default function DepartmentStudentDetail() {
     };
 
     const calculateGenderPercentage = () => {
-        // Gunakan total dari summaryStats untuk konsistensi
         const total = departmentDetail.summaryStats.total_students;
 
         if (total === 0) return { male: 0, female: 0 };
