@@ -7,69 +7,111 @@ use Illuminate\Support\Facades\Cache;
 
 class DepartmentDetailService
 {
+
+
     /**
+     * Enable/disable caching
+     * @var bool
+     */
+    protected $useCache = true;
+    
+    /**
+     * Cache duration in seconds (default: 1 hour)
+     * @var int
+     */
+    protected $cacheDuration = 3600;
+
+
+     /**
      * Mendapatkan informasi program studi
      */
     public function getDepartmentInfo($departmentId)
     {
-        return Cache::remember("department-info-{$departmentId}", 3600, function () use ($departmentId) {
-            return DB::table('mstr_department')
-                ->join('mstr_faculty', 'mstr_department.Faculty_Id', '=', 'mstr_faculty.Faculty_Id')
-                ->select(
-                    'mstr_department.*',
-                    'mstr_faculty.Faculty_Name',
-                    'mstr_faculty.Faculty_Acronym'
-                )
-                ->where('mstr_department.Department_Id', $departmentId)
-                ->first();
+        if (!$this->useCache) {
+            return $this->executeDepartmentInfoQuery($departmentId);
+        }
+
+        return Cache::remember("department-info-{$departmentId}", $this->cacheDuration, function () use ($departmentId) {
+            return $this->executeDepartmentInfoQuery($departmentId);
         });
     }
-    
+
     /**
+     * Execute department info query
+     */
+    private function executeDepartmentInfoQuery($departmentId)
+    {
+        return DB::table('mstr_department')
+            ->join('mstr_faculty', 'mstr_department.Faculty_Id', '=', 'mstr_faculty.Faculty_Id')
+            ->select(
+                'mstr_department.*',
+                'mstr_faculty.Faculty_Name',
+                'mstr_faculty.Faculty_Acronym'
+            )
+            ->where('mstr_department.Department_Id', $departmentId)
+            ->first();
+    }
+
+       /**
      * Mendapatkan data detail program studi
      */
     public function getDepartmentDetailData($departmentId, $termYearId = null, $studentStatus = 'all')
     {
+        if (!$this->useCache) {
+            return $this->executeDepartmentDetailQuery($departmentId, $termYearId, $studentStatus);
+        }
+
         $cacheKey = "department-detail-{$departmentId}-{$termYearId}-{$studentStatus}";
         
-        return Cache::remember($cacheKey, 3600, function () use ($departmentId, $termYearId, $studentStatus) {
-            // Distribusi gender
-            $genderDistribution = $this->getGenderDistribution($departmentId, $termYearId, $studentStatus);
-            
-            // Distribusi agama
-            $religionDistribution = $this->getReligionDistribution($departmentId, $termYearId, $studentStatus);
-            
-            // Distribusi umur
-            $ageDistribution = $this->getAgeDistribution($departmentId, $termYearId, $studentStatus);
-            
-            // Distribusi asal daerah
-            $regionDistribution = $this->getRegionDistribution($departmentId, $termYearId, $studentStatus);
-            
-            // Tren mahasiswa per semester
-            $studentTrend = $this->getStudentTrend($departmentId);
-            
-            // Summary stats
-            $summaryStats = $this->getSummaryStats($departmentId, $termYearId, $studentStatus);
-            
-            // Distribusi per angkatan
-            $yearDistribution = $this->getYearDistribution($departmentId, $termYearId, $studentStatus);
-            
-            // IPK Statistics
-            $gpaStats = $this->getGpaStatistics($departmentId, $termYearId, $studentStatus);
-            
-            return [
-                'genderDistribution' => $genderDistribution,
-                'religionDistribution' => $religionDistribution,
-                'ageDistribution' => $ageDistribution,
-                'regionDistribution' => $regionDistribution,
-                'studentTrend' => $studentTrend,
-                'summaryStats' => $summaryStats,
-                'yearDistribution' => $yearDistribution,
-                'gpaStats' => $gpaStats
-            ];
+        return Cache::remember($cacheKey, $this->cacheDuration, function () use ($departmentId, $termYearId, $studentStatus) {
+            return $this->executeDepartmentDetailQuery($departmentId, $termYearId, $studentStatus);
         });
     }
-    
+
+     /**
+     * Execute department detail query
+     */
+    private function executeDepartmentDetailQuery($departmentId, $termYearId, $studentStatus)
+    {
+        // Distribusi gender
+        $genderDistribution = $this->getGenderDistribution($departmentId, $termYearId, $studentStatus);
+        
+        // Distribusi agama
+        $religionDistribution = $this->getReligionDistribution($departmentId, $termYearId, $studentStatus);
+        
+        // Distribusi umur
+        $ageDistribution = $this->getAgeDistribution($departmentId, $termYearId, $studentStatus);
+        
+        // Distribusi asal daerah
+        $regionDistribution = $this->getRegionDistribution($departmentId, $termYearId, $studentStatus);
+        
+        // Tren mahasiswa per semester
+        $studentTrend = $this->getStudentTrend($departmentId);
+        
+        // Summary stats
+        $summaryStats = $this->getSummaryStats($departmentId, $termYearId, $studentStatus);
+        
+        // Distribusi per angkatan
+        $yearDistribution = $this->getYearDistribution($departmentId, $termYearId, $studentStatus);
+        
+        // IPK Statistics
+        $gpaStats = $this->getGpaStatistics($departmentId, $termYearId, $studentStatus);
+        
+        return [
+            'genderDistribution' => $genderDistribution,
+            'religionDistribution' => $religionDistribution,
+            'ageDistribution' => $ageDistribution,
+            'regionDistribution' => $regionDistribution,
+            'studentTrend' => $studentTrend,
+            'summaryStats' => $summaryStats,
+            'yearDistribution' => $yearDistribution,
+            'gpaStats' => $gpaStats
+        ];
+    }
+
+
+
+  
     /**
      * Distribusi gender di program studi
      */
@@ -339,11 +381,28 @@ class DepartmentDetailService
             'students_above_3' => 85 // percentage
         ];
     }
-    
-    /**
+
+      /**
      * Mendapatkan daftar mahasiswa dengan pagination
      */
     public function getDepartmentStudents($departmentId, $termYearId, $studentStatus, $search, $page, $perPage)
+    {
+        // Don't cache paginated results with search, only cache when no search
+        if (!$this->useCache || !empty($search)) {
+            return $this->executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage);
+        }
+
+        $cacheKey = "department-students-{$departmentId}-{$termYearId}-{$studentStatus}-{$page}-{$perPage}";
+        
+        return Cache::remember($cacheKey, $this->cacheDuration, function () use ($departmentId, $termYearId, $studentStatus, $search, $page, $perPage) {
+            return $this->executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage);
+        });
+    }
+    
+    /**
+     * Execute department students query
+     */
+    private function executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage)
     {
         $query = DB::table('acd_student')
             ->where('acd_student.Department_Id', $departmentId);
@@ -365,7 +424,7 @@ class DepartmentDetailService
         // Search filter
         if ($search) {
             $query->where(function($q) use ($search) {
-                $q->where('acd_student.Student_Name', 'like', "%{$search}%")
+                $q->where('acd_student.Full_Name', 'like', "%{$search}%")
                   ->orWhere('acd_student.Student_Id', 'like', "%{$search}%");
             });
         }
@@ -374,13 +433,26 @@ class DepartmentDetailService
         
         $students = $query->select(
                 'acd_student.Student_Id',
-                'acd_student.Student_Name',
+                'acd_student.Full_Name', // Alias to match frontend
                 'acd_student.Entry_Year_Id',
-                'acd_student.Register_Status_Id'
+                'acd_student.Register_Status_Id',
+                'acd_student.Gender_Id',
+                DB::raw('CASE 
+                    WHEN acd_student.Register_Status_Id = "A" THEN "Aktif"
+                    WHEN acd_student.Register_Status_Id = "C" THEN "Cuti"
+                    WHEN acd_student.Register_Status_Id = "L" THEN "Lulus"
+                    WHEN acd_student.Register_Status_Id = "K" THEN "Keluar"
+                    ELSE "Lainnya"
+                END as Status_Name'),
+                DB::raw('CASE 
+                    WHEN acd_student.Gender_Id = 1 THEN "Laki-laki"
+                    WHEN acd_student.Gender_Id = 2 THEN "Perempuan"
+                    ELSE "Tidak Diketahui"
+                END as Gender_Name')
             )
             ->offset(($page - 1) * $perPage)
             ->limit($perPage)
-            ->orderBy('acd_student.Student_Name')
+            ->orderBy('acd_student.Full_Name')
             ->get();
             
         return [
@@ -391,7 +463,6 @@ class DepartmentDetailService
             'last_page' => ceil($total / $perPage)
         ];
     }
-    
     /**
      * Get current active term ID
      */

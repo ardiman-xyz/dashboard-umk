@@ -274,6 +274,7 @@ class AcademicDataController extends Controller
         $search = $request->input('search', '');
         $page = $request->input('page', 1);
         $perPage = $request->input('per_page', 20);
+        $genderFilter = $request->input('gender_filter', null); // New parameter for gender filtering
 
         $students = $this->departmentDetailService->getDepartmentStudents(
             $departmentId, 
@@ -281,10 +282,20 @@ class AcademicDataController extends Controller
             $studentStatus, 
             $search, 
             $page, 
-            $perPage
+            $perPage,
+            $genderFilter
         );
 
-        return response()->json($students);
+        return response()->json([
+            'students' => $students,
+            // 'statistics' => $statistics,
+            'filters' => [
+                'term_year_id' => $termYearId,
+                'student_status' => $studentStatus,
+                'search' => $search,
+                'gender_filter' => $genderFilter
+            ]
+        ]);
     }
 
 }

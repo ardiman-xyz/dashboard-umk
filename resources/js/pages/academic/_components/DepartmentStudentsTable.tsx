@@ -1,25 +1,31 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import axios from 'axios';
-import { ChevronLeft, ChevronRight, Download, Filter, Search } from 'lucide-react';
+import { Search, Users } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
-interface StudentData {
+interface Student {
     Student_Id: string;
-    Student_Name: string;
-    Entry_Year_Id: string;
+    Full_Name: string;
+    Entry_Year_Id: string | number; // Allow both string and number
     Register_Status_Id: string;
+    Gender_Id: number;
+    Status_Name: string;
+    Gender_Name: string;
 }
 
-interface StudentsResponse {
-    data: StudentData[];
+interface StudentData {
+    data: Student[];
     total: number;
     per_page: number;
     current_page: number;
     last_page: number;
+}
+
+interface ApiResponse {
+    students: StudentData;
+    filters: any;
 }
 
 interface DepartmentStudentsTableProps {
@@ -29,30 +35,28 @@ interface DepartmentStudentsTableProps {
 }
 
 export default function DepartmentStudentsTable({ departmentId, termYearId, studentStatus }: DepartmentStudentsTableProps) {
-    const [students, setStudents] = useState<StudentsResponse>({
-        data: [],
-        total: 0,
-        per_page: 20,
-        current_page: 1,
-        last_page: 1,
-    });
-    const [loading, setLoading] = useState(false);
+    const [students, setStudents] = useState<StudentData | null>(null);
+    const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [currentPage, setCurrentPage] = useState(1);
 
-    const loadStudents = async (page: number = 1, searchQuery: string = '') => {
-        setLoading(true);
+    const loadStudents = async (page = 1) => {
         try {
-            const response = await axios.get(route('academic.department.students', { departmentId }), {
+            setLoading(true);
+            const response = await axios.get(`/academic/department/${departmentId}/students`, {
                 params: {
                     term_year_id: termYearId,
                     student_status: studentStatus,
-                    search: searchQuery,
+                    search: search,
                     page: page,
-                    per_page: 20,
+                    per_page: 10,
                 },
             });
-            setStudents(response.data);
+
+            // Extract students data from API response
+            const apiResponse: ApiResponse = response.data;
+            setStudents(apiResponse.students);
+            setCurrentPage(parseInt(apiResponse.students.current_page.toString()));
         } catch (error) {
             console.error('Error loading students:', error);
         } finally {
@@ -61,186 +65,141 @@ export default function DepartmentStudentsTable({ departmentId, termYearId, stud
     };
 
     useEffect(() => {
-        loadStudents(currentPage, search);
-    }, [departmentId, termYearId, studentStatus, currentPage]);
+        loadStudents(1);
+    }, [departmentId, termYearId, studentStatus, search]);
 
-    const handleSearch = (e: React.FormEvent) => {
-        e.preventDefault();
-        setCurrentPage(1);
-        loadStudents(1, search);
-    };
-
-    const handlePageChange = (page: number) => {
-        setCurrentPage(page);
-        loadStudents(page, search);
-    };
-
-    const getStatusBadge = (status: string) => {
+    const getStatusBadgeVariant = (status: string) => {
         switch (status) {
-            case 'A':
-                return <Badge variant="default">Aktif</Badge>;
-            case 'C':
-                return <Badge variant="secondary">Cuti</Badge>;
-            case 'L':
-                return <Badge variant="outline">Lulus</Badge>;
-            case 'K':
-                return <Badge variant="destructive">Keluar</Badge>;
+            case 'Aktif':
+                return 'default';
+            case 'Lulus':
+                return 'secondary';
+            case 'Cuti':
+                return 'outline';
+            case 'Keluar':
+                return 'destructive';
             default:
-                return <Badge variant="secondary">{status}</Badge>;
+                return 'outline';
         }
     };
 
-    const formatEntryYear = (entryYearId: string) => {
-        if (entryYearId.length >= 4) {
-            return entryYearId.substring(0, 4);
-        }
-        return entryYearId;
+    const formatNumber = (num: number): string => {
+        return num.toLocaleString('id-ID');
     };
+
+    if (loading && !students) {
+        return (
+            <Card>
+                <CardContent className="flex h-64 items-center justify-center">
+                    <div className="text-center">
+                        <div className="border-primary mx-auto mb-4 h-8 w-8 animate-spin rounded-full border-b-2"></div>
+                        <p>Memuat data mahasiswa...</p>
+                    </div>
+                </CardContent>
+            </Card>
+        );
+    }
 
     return (
         <Card>
             <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                    <Filter className="h-5 w-5" />
+                    <Users className="h-5 w-5" />
                     Data Mahasiswa Program Studi
                 </CardTitle>
                 <CardDescription>Daftar lengkap mahasiswa dengan fitur pencarian dan pagination</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-                {/* Search and Actions */}
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <form onSubmit={handleSearch} className="flex gap-2">
-                        <Input
+            <CardContent>
+                {/* Search */}
+                <div className="mb-6">
+                    <div className="relative">
+                        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 transform text-gray-400" />
+                        <input
+                            type="text"
                             placeholder="Cari nama atau NIM mahasiswa..."
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="w-[300px]"
+                            className="w-full rounded-md border border-gray-300 py-2 pr-4 pl-10 focus:border-transparent focus:ring-2 focus:ring-blue-500"
                         />
-                        <Button type="submit" size="icon" variant="outline">
-                            <Search className="h-4 w-4" />
-                        </Button>
-                    </form>
-
-                    <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                            <Download className="mr-2 h-4 w-4" />
-                            Export Excel
-                        </Button>
                     </div>
                 </div>
 
                 {/* Table */}
-                <div className="rounded-md border">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-[120px]">NIM</TableHead>
-                                <TableHead>Nama Mahasiswa</TableHead>
-                                <TableHead className="w-[100px]">Angkatan</TableHead>
-                                <TableHead className="w-[100px]">Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {loading ? (
-                                // Loading skeleton
-                                Array.from({ length: 5 }).map((_, index) => (
-                                    <TableRow key={index}>
-                                        <TableCell>
-                                            <div className="bg-muted h-4 w-full animate-pulse rounded"></div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="bg-muted h-4 w-full animate-pulse rounded"></div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="bg-muted h-4 w-full animate-pulse rounded"></div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="bg-muted h-4 w-full animate-pulse rounded"></div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))
-                            ) : students.data.length > 0 ? (
-                                students.data.map((student) => (
-                                    <TableRow key={student.Student_Id}>
-                                        <TableCell className="font-mono text-sm">{student.Student_Id}</TableCell>
-                                        <TableCell className="font-medium">{student.Student_Name}</TableCell>
-                                        <TableCell>{formatEntryYear(student.Entry_Year_Id)}</TableCell>
-                                        <TableCell>{getStatusBadge(student.Register_Status_Id)}</TableCell>
-                                    </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={4} className="py-8 text-center">
-                                        <div className="flex flex-col items-center gap-2">
-                                            <Search className="text-muted-foreground h-8 w-8" />
-                                            <span className="text-muted-foreground">
-                                                {search ? 'Tidak ada mahasiswa yang ditemukan' : 'Tidak ada data mahasiswa'}
-                                            </span>
-                                        </div>
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
+                <div className="overflow-hidden rounded-lg border">
+                    <div className="overflow-x-auto">
+                        <table className="w-full">
+                            <thead className="bg-gray-50">
+                                <tr>
+                                    <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">No</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">NIM</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Nama Mahasiswa</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Angkatan</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Gender</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-200 bg-white">
+                                {students?.data.map((student, index) => (
+                                    <tr key={student.Student_Id} className="hover:bg-gray-50">
+                                        <td className="px-4 py-4 text-sm whitespace-nowrap text-gray-900">
+                                            {(currentPage - 1) * students.per_page + index + 1}
+                                        </td>
+                                        <td className="px-4 py-4 font-mono text-sm whitespace-nowrap">{student.Student_Id}</td>
+                                        <td className="px-4 py-4 whitespace-nowrap">
+                                            <div className="font-medium text-gray-900">{student.Full_Name}</div>
+                                        </td>
+                                        <td className="px-4 py-4 text-sm whitespace-nowrap text-gray-900">
+                                            {student.Entry_Year_Id ? String(student.Entry_Year_Id).substring(0, 4) : '-'}
+                                        </td>
+                                        <td className="px-4 py-4 text-sm whitespace-nowrap text-gray-900">{student.Gender_Name}</td>
+                                        <td className="px-4 py-4 whitespace-nowrap">
+                                            <Badge variant={getStatusBadgeVariant(student.Status_Name)}>{student.Status_Name}</Badge>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
 
                 {/* Pagination */}
-                {students.total > 0 && (
-                    <div className="flex items-center justify-between">
-                        <div className="text-muted-foreground text-sm">
-                            Menampilkan {(students.current_page - 1) * students.per_page + 1} -{' '}
-                            {Math.min(students.current_page * students.per_page, students.total)} dari {students.total.toLocaleString()} mahasiswa
+                {students && students.last_page > 1 && (
+                    <div className="mt-6 flex items-center justify-between">
+                        <div className="text-sm text-gray-700">
+                            Menampilkan {(currentPage - 1) * students.per_page + 1} - {Math.min(currentPage * students.per_page, students.total)} dari{' '}
+                            {formatNumber(students.total)} data
                         </div>
-
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handlePageChange(students.current_page - 1)}
-                                disabled={students.current_page <= 1}
-                            >
-                                <ChevronLeft className="h-4 w-4" />
+                        <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={() => loadStudents(currentPage - 1)} disabled={currentPage <= 1 || loading}>
                                 Previous
                             </Button>
 
-                            {/* Page numbers */}
-                            <div className="flex items-center gap-1">
-                                {Array.from({ length: Math.min(5, students.last_page) }, (_, i) => {
-                                    let pageNum = i + 1;
-
-                                    // Adjust page numbers to show current page in the middle
-                                    if (students.last_page > 5) {
-                                        const start = Math.max(1, students.current_page - 2);
-                                        const end = Math.min(students.last_page, start + 4);
-                                        pageNum = start + i;
-
-                                        if (pageNum > end) return null;
-                                    }
-
-                                    return (
-                                        <Button
-                                            key={pageNum}
-                                            variant={pageNum === students.current_page ? 'default' : 'outline'}
-                                            size="sm"
-                                            onClick={() => handlePageChange(pageNum)}
-                                            className="h-8 w-8 p-0"
-                                        >
-                                            {pageNum}
-                                        </Button>
-                                    );
-                                })}
-                            </div>
+                            <span className="px-3 py-1 text-sm">
+                                Page {currentPage} of {students.last_page}
+                            </span>
 
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handlePageChange(students.current_page + 1)}
-                                disabled={students.current_page >= students.last_page}
+                                onClick={() => loadStudents(currentPage + 1)}
+                                disabled={currentPage >= students.last_page || loading}
                             >
                                 Next
-                                <ChevronRight className="h-4 w-4" />
                             </Button>
                         </div>
+                    </div>
+                )}
+
+                {/* Empty state */}
+                {students && students.data.length === 0 && (
+                    <div className="py-12 text-center">
+                        <Users className="mx-auto mb-4 h-12 w-12 text-gray-400" />
+                        <p className="text-gray-500">Tidak ada data mahasiswa</p>
+                        {search && (
+                            <button onClick={() => setSearch('')} className="mt-2 text-sm text-blue-600 hover:text-blue-800">
+                                Hapus pencarian
+                            </button>
+                        )}
                     </div>
                 )}
             </CardContent>

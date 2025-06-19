@@ -118,3 +118,84 @@ export interface AcademicStats {
     gpaTrend?: GpaTrendData;
     gradeDistribution?: GradeDistributionData;
 }
+
+export interface DepartmentInfo {
+    Department_Id: string;
+    Department_Name: string;
+    Department_Acronym: string;
+    Faculty_Name: string;
+    Faculty_Acronym: string;
+    Faculty_Id: string;
+}
+
+export interface GenderDistribution {
+    laki: number;
+    perempuan: number;
+    total: number;
+}
+
+export interface ReligionData {
+    name: string;
+    value: number;
+}
+
+export interface AgeData {
+    age: string;
+    value: number;
+}
+
+export interface RegionData {
+    name: string;
+    value: number;
+}
+
+export interface StudentTrendData {
+    Term_Year_Id: string;
+    Term_Year_Name: string;
+    student_count: number;
+}
+
+export interface YearDistributionData {
+    year: string;
+    student_count: number;
+}
+
+export interface GpaStats {
+    average_gpa: number;
+    highest_gpa: number;
+    lowest_gpa: number;
+    students_above_3: number;
+}
+
+export interface DepartmentDetailData {
+    genderDistribution: GenderDistribution;
+    religionDistribution: ReligionData[];
+    ageDistribution: AgeData[];
+    regionDistribution: RegionData[];
+    studentTrend: StudentTrendData[];
+    summaryStats: {
+        total_students: number;
+    };
+    yearDistribution: YearDistributionData[];
+    gpaStats: GpaStats;
+}
+
+export interface FilterOption {
+    id: string;
+    name: string;
+}
+
+export interface DepartmentPageProps {
+    departmentInfo: DepartmentInfo;
+    departmentDetail: DepartmentDetailData;
+    filters: {
+        currentTerm: {
+            id: string;
+            name: string;
+        };
+        availableTerms: FilterOption[];
+    };
+    termYearId: string;
+    studentStatus: string;
+    [key: string]: any;
+}
