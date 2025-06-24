@@ -291,8 +291,10 @@ class AcademicDataController extends Controller
         
         // FIX: Gunakan 'gender' instead of 'gender_filter'
         $genderFilter = $request->input('gender', null); // Changed from 'gender_filter'
-        $useCache = $request->input('use_cache', true);
+        $useCache = $request->input('use_cache', false);
         $this->departmentDetailService->setCacheEnabled($useCache);
+
+        $religionFilter = $request->input('religion', null);
         
 
         $students = $this->departmentDetailService->getDepartmentStudents(
@@ -302,7 +304,8 @@ class AcademicDataController extends Controller
             $search, 
             $page, 
             $perPage,
-            $genderFilter
+            $genderFilter,
+            $religionFilter
         );
 
         return response()->json([
@@ -311,7 +314,8 @@ class AcademicDataController extends Controller
                 'term_year_id' => $termYearId,
                 'student_status' => $studentStatus,
                 'search' => $search,
-                'gender_filter' => $genderFilter // Keep this for response consistency
+                'gender_filter' => $genderFilter,
+                'religion_filter' => $religionFilter
             ]
         ]);
     }

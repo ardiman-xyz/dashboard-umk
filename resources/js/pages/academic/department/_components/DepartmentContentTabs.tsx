@@ -63,8 +63,9 @@ interface DepartmentContentTabsProps {
     termYearId: string;
     studentStatus: string;
     activeTab?: string;
-    onTabChange?: (tab: string, genderFilter?: string) => void;
+    onTabChange?: (tab: string, genderFilter?: string, religionFilter?: string) => void;
     genderFilter?: string;
+    religionFilter?: string; // Add religion filter prop
 }
 
 export default function DepartmentContentTabs({
@@ -76,11 +77,19 @@ export default function DepartmentContentTabs({
     activeTab = 'overview',
     onTabChange,
     genderFilter,
+    religionFilter, // Add religion filter
 }: DepartmentContentTabsProps) {
     const handleGenderClick = (gender: 'laki' | 'perempuan') => {
         // Switch to students tab and set gender filter when gender is clicked
         if (onTabChange) {
             onTabChange('students', gender); // Pass gender as second parameter
+        }
+    };
+
+    const handleReligionClick = (religion: string) => {
+        // Switch to students tab and set religion filter when religion is clicked
+        if (onTabChange) {
+            onTabChange('students', undefined, religion); // Pass religion as third parameter
         }
     };
 
@@ -105,6 +114,7 @@ export default function DepartmentContentTabs({
                     termYearId={termYearId} // Pass termYearId
                     studentStatus={studentStatus} // Pass studentStatus
                     onGenderClick={handleGenderClick}
+                    onReligionClick={handleReligionClick} // Add religion click handler
                 />
             </TabsContent>
 
@@ -137,6 +147,7 @@ export default function DepartmentContentTabs({
                     termYearId={termYearId}
                     studentStatus={studentStatus}
                     initialGenderFilter={genderFilter}
+                    initialReligionFilter={religionFilter} // Pass religion filter
                 />
             </TabsContent>
         </Tabs>

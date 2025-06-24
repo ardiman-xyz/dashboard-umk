@@ -16,9 +16,11 @@ export default function DepartmentStudentDetail() {
     const urlParams = new URLSearchParams(window.location.search);
     const initialTab = urlParams.get('tab') || 'overview';
     const initialGenderFilter = urlParams.get('gender') || '';
+    const initialReligionFilter = urlParams.get('religion') || ''; // Add religion filter
 
     const [activeTab, setActiveTab] = useState(initialTab);
     const [genderFilter, setGenderFilter] = useState<string>(initialGenderFilter);
+    const [religionFilter, setReligionFilter] = useState<string>(initialReligionFilter); // Add religion state
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
@@ -57,12 +59,15 @@ export default function DepartmentStudentDetail() {
             student_status: selectedStatus,
         };
 
-        // Add current URL params to preserve tab and gender filter
+        // Add current URL params to preserve tab, gender, and religion filter
         if (currentParams.get('tab')) {
             queryParams.tab = currentParams.get('tab');
         }
         if (currentParams.get('gender')) {
             queryParams.gender = currentParams.get('gender');
+        }
+        if (currentParams.get('religion')) {
+            queryParams.religion = currentParams.get('religion');
         }
 
         router.visit(route('academic.department.detail', queryParams), {
@@ -71,7 +76,7 @@ export default function DepartmentStudentDetail() {
         });
     };
 
-    const updateURL = (tab: string, gender?: string) => {
+    const updateURL = (tab: string, gender?: string, religion?: string) => {
         const url = new URL(window.location.href);
 
         // Update tab parameter
@@ -88,14 +93,22 @@ export default function DepartmentStudentDetail() {
             url.searchParams.delete('gender');
         }
 
+        // Update religion parameter
+        if (religion && religion !== '') {
+            url.searchParams.set('religion', religion);
+        } else {
+            url.searchParams.delete('religion');
+        }
+
         // Update URL without page reload
         window.history.replaceState({}, '', url.toString());
     };
 
-    const handleTabChange = (tab: string, genderFilterParam?: string) => {
+    const handleTabChange = (tab: string, genderFilterParam?: string, religionFilterParam?: string) => {
         setActiveTab(tab);
 
         let newGenderFilter = genderFilter;
+        let newReligionFilter = religionFilter;
 
         if (genderFilterParam) {
             newGenderFilter = genderFilterParam;
@@ -105,7 +118,15 @@ export default function DepartmentStudentDetail() {
             setGenderFilter('');
         }
 
-        updateURL(tab, newGenderFilter);
+        if (religionFilterParam) {
+            newReligionFilter = religionFilterParam;
+            setReligionFilter(religionFilterParam);
+        } else if (tab !== 'students') {
+            newReligionFilter = '';
+            setReligionFilter('');
+        }
+
+        updateURL(tab, newGenderFilter, newReligionFilter);
     };
 
     // Handle browser back/forward navigation
@@ -114,9 +135,11 @@ export default function DepartmentStudentDetail() {
             const urlParams = new URLSearchParams(window.location.search);
             const tabFromUrl = urlParams.get('tab') || 'overview';
             const genderFromUrl = urlParams.get('gender') || '';
+            const religionFromUrl = urlParams.get('religion') || '';
 
             setActiveTab(tabFromUrl);
             setGenderFilter(genderFromUrl);
+            setReligionFilter(religionFromUrl);
         };
 
         window.addEventListener('popstate', handlePopState);
@@ -162,6 +185,7 @@ export default function DepartmentStudentDetail() {
                     activeTab={activeTab}
                     onTabChange={handleTabChange}
                     genderFilter={genderFilter}
+                    religionFilter={religionFilter} // Pass religion filter
                 />
             </div>
         </AppLayout>

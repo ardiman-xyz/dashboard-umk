@@ -385,29 +385,29 @@ class DepartmentDetailService
       /**
      * Mendapatkan daftar mahasiswa dengan pagination
      */
-    public function getDepartmentStudents($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter)
+    public function getDepartmentStudents($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter,  $religionFilter = null)
     {
         // Don't cache paginated results with search, only cache when no search
         if (!$this->useCache || !empty($search)) {
-            return $this->executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter);
+            return $this->executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter, $religionFilter);
         }
 
-        $cacheKey = "department-students-{$departmentId}-{$termYearId}-{$studentStatus}-{$page}-{$perPage}-{$genderFilter}";
+        $cacheKey = "department-students-{$departmentId}-{$termYearId}-{$studentStatus}-{$page}-{$perPage}-{$genderFilter}-{$religionFilter}";
         
-        return Cache::remember($cacheKey, $this->cacheDuration, function () use ($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter) {
-            return $this->executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter);
+        return Cache::remember($cacheKey, $this->cacheDuration, function () use ($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter, $religionFilter) {
+            return $this->executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter, $religionFilter);
         });
     }
     
     /**
      * Execute department students query
      */
-    private function executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter = null)
+    private function executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter = null, $religionFilter = null)
     {
         $query = DB::table('acd_student')
+            ->leftJoin('mstr_religion', 'acd_student.Religion_Id', '=', 'mstr_religion.Religion_Id')
             ->where('acd_student.Department_Id', $departmentId);
             
-        // Apply filters
         if ($studentStatus === 'active') {
             $currentTermId = ($termYearId === 'all' || $termYearId === null) 
                 ? $this->getCurrentActiveTermId() 
@@ -429,6 +429,7 @@ class DepartmentDetailService
             });
         }
         
+        // Gender filter
         if ($genderFilter) {
             $genderId = null;
             if ($genderFilter === 'laki') {
@@ -440,7 +441,15 @@ class DepartmentDetailService
             if ($genderId) {
                 $query->where('acd_student.Gender_Id', $genderId);
             }
-            
+        }
+        
+        // Religion filter - NEW
+        if ($religionFilter) {
+            if ($religionFilter === 'Lainnya') {
+                $query->whereNull('mstr_religion.Religion_Name');
+            } else {
+                $query->where('mstr_religion.Religion_Name', $religionFilter);
+            }
         }
         
         $total = $query->count();
@@ -452,6 +461,7 @@ class DepartmentDetailService
                 'acd_student.Register_Status_Id',
                 'acd_student.Gender_Id',
                 'acd_student.Nim',
+                'mstr_religion.Religion_Name', // Add religion name to select
                 DB::raw('CASE 
                     WHEN acd_student.Register_Status_Id = "A" THEN "Aktif"
                     WHEN acd_student.Register_Status_Id = "C" THEN "Cuti"
@@ -463,14 +473,16 @@ class DepartmentDetailService
                     WHEN acd_student.Gender_Id = 1 THEN "Laki-laki"
                     WHEN acd_student.Gender_Id = 2 THEN "Perempuan"
                     ELSE "Tidak Diketahui"
-                END as Gender_Name')
+                END as Gender_Name'),
+                DB::raw('CASE 
+                    WHEN mstr_religion.Religion_Name IS NULL THEN "Lainnya" 
+                    ELSE mstr_religion.Religion_Name 
+                END as Religion_Display_Name') // Add religion display name
             )
             ->offset(($page - 1) * $perPage)
             ->limit($perPage)
             ->orderBy('acd_student.Full_Name')
             ->get();
-            
-        
             
         return [
             'data' => $students,

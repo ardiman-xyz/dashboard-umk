@@ -1,7 +1,7 @@
 import DepartmentGenderChart from '../../_components/DepartmentGenderChart';
 import DepartmentYearDistributionChart from '../../_components/DepartmentYearDistributionChart';
 import FacultyAgeChart from '../../_components/FacultyAgeChart';
-import FacultyReligionChart from '../../_components/FacultyReligionChart';
+import DepartmentReligion from './DepartmentReligion';
 
 interface GenderDistribution {
     laki: number;
@@ -34,6 +34,7 @@ interface DepartmentOverviewTabProps {
     termYearId: string; // Add this prop
     studentStatus: string; // Add this prop
     onGenderClick?: (gender: 'laki' | 'perempuan') => void;
+    onReligionClick?: (religion: string) => void; // Add religion click handler
 }
 
 export default function DepartmentOverviewTab({
@@ -46,6 +47,7 @@ export default function DepartmentOverviewTab({
     termYearId, // Add this
     studentStatus, // Add this
     onGenderClick,
+    onReligionClick, // Add this
 }: DepartmentOverviewTabProps) {
     return (
         <div className="space-y-6">
@@ -62,7 +64,14 @@ export default function DepartmentOverviewTab({
             </div>
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                <FacultyReligionChart religionDistribution={religionDistribution} facultyName={departmentName} />
+                <DepartmentReligion
+                    religionDistribution={religionDistribution}
+                    departmentName={departmentName}
+                    departmentId={departmentId} // Pass departmentId
+                    termYearId={termYearId} // Pass termYearId
+                    studentStatus={studentStatus} // Pass studentStatus
+                    onReligionClick={onReligionClick} // Pass religion click handler
+                />
                 <FacultyAgeChart ageDistribution={ageDistribution} facultyName={departmentName} />
             </div>
         </div>
