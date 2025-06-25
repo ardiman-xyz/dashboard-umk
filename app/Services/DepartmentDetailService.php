@@ -392,52 +392,42 @@ class DepartmentDetailService
         $search, 
         $page, 
         $perPage, 
-        $genderFilter,  
+        $genderFilter = null,  
         $religionFilter = null,
         $ageFilter = null    
     )
     {
-        if (!$this->useCache || !empty($search)) {
-            return $this->executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter, $religionFilter);
-        // Age filter - NEW
-            if ($ageFilter) {
-                $query->whereNotNull('acd_student.Birth_Date');
-                
-                switch ($ageFilter) {
-                    case '17-19':
-                        $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 17 AND 19');
-                        break;
-                    case '20-22':
-                        $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 20 AND 22');
-                        break;
-                    case '23-25':
-                        $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 23 AND 25');
-                        break;
-                    case '26-30':
-                        $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 26 AND 30');
-                        break;
-                    case '> 30':
-                        $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) > 30');
-                        break;
-                }
-            }
+        // Jangan gunakan cache jika ada search atau filter yang aktif
+        if (!$this->useCache || !empty($search) || $genderFilter || $religionFilter || $ageFilter) {
+            return $this->executeDepartmentStudentsQuery(
+                $departmentId, $termYearId, $studentStatus, $search, 
+                $page, $perPage, $genderFilter, $religionFilter, $ageFilter
+            );
         }
+    
         $cacheKey = "department-students-{$departmentId}-{$termYearId}-{$studentStatus}-{$page}-{$perPage}-{$genderFilter}-{$religionFilter}-{$ageFilter}";
         
         return Cache::remember($cacheKey, $this->cacheDuration, function () use ($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter, $religionFilter, $ageFilter) {
-            return $this->executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter, $religionFilter, $ageFilter);
+            return $this->executeDepartmentStudentsQuery(
+                $departmentId, $termYearId, $studentStatus, $search, 
+                $page, $perPage, $genderFilter, $religionFilter, $ageFilter
+            );
         });
     }
     
     /**
      * Execute department students query
      */
-    private function executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter = null, $religionFilter = null)
+    private function executeDepartmentStudentsQuery(
+        $departmentId, $termYearId, $studentStatus, $search, 
+        $page, $perPage, $genderFilter = null, $religionFilter = null, $ageFilter = null
+    )
     {
         $query = DB::table('acd_student')
             ->leftJoin('mstr_religion', 'acd_student.Religion_Id', '=', 'mstr_religion.Religion_Id')
             ->where('acd_student.Department_Id', $departmentId);
             
+        // Apply base filters
         if ($studentStatus === 'active') {
             $currentTermId = ($termYearId === 'all' || $termYearId === null) 
                 ? $this->getCurrentActiveTermId() 
@@ -473,12 +463,35 @@ class DepartmentDetailService
             }
         }
         
-        // Religion filter - NEW
+        // Religion filter
         if ($religionFilter) {
             if ($religionFilter === 'Lainnya') {
                 $query->whereNull('mstr_religion.Religion_Name');
             } else {
                 $query->where('mstr_religion.Religion_Name', $religionFilter);
+            }
+        }
+        
+        // Age filter - FIXED VERSION
+        if ($ageFilter) {
+            $query->whereNotNull('acd_student.Birth_Date');
+            
+            switch ($ageFilter) {
+                case '17-19':
+                    $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 17 AND 19');
+                    break;
+                case '20-22':
+                    $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 20 AND 22');
+                    break;
+                case '23-25':
+                    $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 23 AND 25');
+                    break;
+                case '26-30':
+                    $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 26 AND 30');
+                    break;
+                case '> 30':
+                    $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) > 30');
+                    break;
             }
         }
         
@@ -491,7 +504,8 @@ class DepartmentDetailService
                 'acd_student.Register_Status_Id',
                 'acd_student.Gender_Id',
                 'acd_student.Nim',
-                'mstr_religion.Religion_Name', // Add religion name to select
+                'acd_student.Birth_Date', // Add Birth_Date to calculate age
+                'mstr_religion.Religion_Name',
                 DB::raw('CASE 
                     WHEN acd_student.Register_Status_Id = "A" THEN "Aktif"
                     WHEN acd_student.Register_Status_Id = "C" THEN "Cuti"
@@ -507,7 +521,24 @@ class DepartmentDetailService
                 DB::raw('CASE 
                     WHEN mstr_religion.Religion_Name IS NULL THEN "Lainnya" 
                     ELSE mstr_religion.Religion_Name 
-                END as Religion_Display_Name') // Add religion display name
+                END as Religion_Display_Name'),
+                DB::raw('CASE 
+                    WHEN acd_student.Birth_Date IS NOT NULL THEN 
+                        TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE())
+                    ELSE NULL
+                END as Age'),
+                DB::raw('CASE 
+                    WHEN acd_student.Birth_Date IS NOT NULL THEN
+                        CASE 
+                            WHEN TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 17 AND 19 THEN "17-19"
+                            WHEN TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 20 AND 22 THEN "20-22"
+                            WHEN TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 23 AND 25 THEN "23-25"
+                            WHEN TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 26 AND 30 THEN "26-30"
+                            WHEN TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) > 30 THEN "> 30"
+                            ELSE "Tidak Diketahui"
+                        END
+                    ELSE "Tidak Diketahui"
+                END as Age_Range')
             )
             ->offset(($page - 1) * $perPage)
             ->limit($perPage)

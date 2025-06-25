@@ -291,7 +291,7 @@ class AcademicDataController extends Controller
         
         // FIX: Gunakan 'gender' instead of 'gender_filter'
         $genderFilter = $request->input('gender', null); // Changed from 'gender_filter'
-        $useCache = $request->input('use_cache', false);
+        $useCache = $request->input('use_cache', true);
         $this->departmentDetailService->setCacheEnabled($useCache);
 
         $religionFilter = $request->input('religion', null);
@@ -309,8 +309,6 @@ class AcademicDataController extends Controller
             $religionFilter,
             $ageFilter
         );
-
-        dd($students);
 
         return response()->json([
             'students' => $students,

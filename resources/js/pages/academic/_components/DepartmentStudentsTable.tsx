@@ -15,6 +15,9 @@ interface Student {
     Status_Name: string;
     Gender_Name: string;
     Religion_Display_Name: string;
+    Age?: number; // Add age field
+    Age_Range?: string; // Add age range field
+    Birth_Date?: string; // Add birth date field
 }
 
 interface StudentData {
@@ -36,7 +39,7 @@ interface DepartmentStudentsTableProps {
     studentStatus: string;
     initialGenderFilter?: string;
     initialReligionFilter?: string;
-    initialAgeFilter?: string; // Add religion filter prop
+    initialAgeFilter?: string;
 }
 
 export default function DepartmentStudentsTable({
@@ -51,13 +54,13 @@ export default function DepartmentStudentsTable({
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [genderFilter, setGenderFilter] = useState(initialGenderFilter || '');
-    const [religionFilter, setReligionFilter] = useState(initialReligionFilter || ''); // Add religion state
+    const [religionFilter, setReligionFilter] = useState(initialReligionFilter || '');
+    const [ageFilter, setAgeFilter] = useState(initialAgeFilter || '');
     const [currentPage, setCurrentPage] = useState(1);
     const [debounceTimeout, setDebounceTimeout] = useState<NodeJS.Timeout | null>(null);
-    const [ageFilter, setAgeFilter] = useState(initialAgeFilter || '');
 
     // Method to update URL using Inertia router
-    const updateURLWithInertia = (newGenderFilter: string, newReligionFilter: string, newSearch: string = search) => {
+    const updateURLWithInertia = (newGenderFilter: string, newReligionFilter: string, newAgeFilter: string, newSearch: string = search) => {
         const currentParams = new URLSearchParams(window.location.search);
 
         // Build new params
@@ -82,6 +85,11 @@ export default function DepartmentStudentsTable({
             params.religion = newReligionFilter;
         }
 
+        // Add age filter if not empty
+        if (newAgeFilter && newAgeFilter !== '') {
+            params.age = newAgeFilter;
+        }
+
         // Add search if not empty
         if (newSearch && newSearch.trim() !== '') {
             params.search = newSearch.trim();
@@ -99,7 +107,7 @@ export default function DepartmentStudentsTable({
     };
 
     // Backend filtering function
-    const loadStudents = async (page = 1, searchQuery = '', selectedGender = '', selectedReligion = '') => {
+    const loadStudents = async (page = 1, searchQuery = '', selectedGender = '', selectedReligion = '', selectedAge = '') => {
         try {
             setLoading(true);
 
@@ -120,6 +128,10 @@ export default function DepartmentStudentsTable({
 
             if (selectedReligion && selectedReligion !== '') {
                 params.religion = selectedReligion;
+            }
+
+            if (selectedAge && selectedAge !== '') {
+                params.age = selectedAge;
             }
 
             console.log('API Request params:', params);
@@ -162,10 +174,10 @@ export default function DepartmentStudentsTable({
         setCurrentPage(1);
 
         // Update URL immediately when filter changes
-        updateURLWithInertia(selectedGender, religionFilter);
+        updateURLWithInertia(selectedGender, religionFilter, ageFilter);
 
         // Load new data
-        loadStudents(1, search, selectedGender, religionFilter);
+        loadStudents(1, search, selectedGender, religionFilter, ageFilter);
     };
 
     // Handle religion filter change with URL update
@@ -176,10 +188,24 @@ export default function DepartmentStudentsTable({
         setCurrentPage(1);
 
         // Update URL immediately when filter changes
-        updateURLWithInertia(genderFilter, selectedReligion);
+        updateURLWithInertia(genderFilter, selectedReligion, ageFilter);
 
         // Load new data
-        loadStudents(1, search, genderFilter, selectedReligion);
+        loadStudents(1, search, genderFilter, selectedReligion, ageFilter);
+    };
+
+    // Handle age filter change with URL update
+    const handleAgeFilterChange = (selectedAge: string) => {
+        console.log('Age filter changed to:', selectedAge);
+
+        setAgeFilter(selectedAge);
+        setCurrentPage(1);
+
+        // Update URL immediately when filter changes
+        updateURLWithInertia(genderFilter, religionFilter, selectedAge);
+
+        // Load new data
+        loadStudents(1, search, genderFilter, religionFilter, selectedAge);
     };
 
     // Handle search input change with debouncing
@@ -195,8 +221,8 @@ export default function DepartmentStudentsTable({
         // Set new timeout for debounced search
         const timeout = setTimeout(() => {
             setCurrentPage(1);
-            updateURLWithInertia(genderFilter, religionFilter, newSearch);
-            loadStudents(1, newSearch, genderFilter, religionFilter);
+            updateURLWithInertia(genderFilter, religionFilter, ageFilter, newSearch);
+            loadStudents(1, newSearch, genderFilter, religionFilter, ageFilter);
         }, 500);
 
         setDebounceTimeout(timeout);
@@ -207,13 +233,14 @@ export default function DepartmentStudentsTable({
         setSearch('');
         setGenderFilter('');
         setReligionFilter('');
+        setAgeFilter('');
         setCurrentPage(1);
 
         // Update URL by removing filter parameters
-        updateURLWithInertia('', '', '');
+        updateURLWithInertia('', '', '', '');
 
         // Load data without filters
-        loadStudents(1, '', '', '');
+        loadStudents(1, '', '', '', '');
     };
 
     // Handle pagination with URL update
@@ -229,12 +256,12 @@ export default function DepartmentStudentsTable({
         }
         window.history.replaceState({}, '', url.toString());
 
-        loadStudents(page, search, genderFilter, religionFilter);
+        loadStudents(page, search, genderFilter, religionFilter, ageFilter);
     };
 
     // Initial load and when dependencies change
     useEffect(() => {
-        loadStudents(1, search, genderFilter, religionFilter);
+        loadStudents(1, search, genderFilter, religionFilter, ageFilter);
     }, [departmentId, termYearId, studentStatus]);
 
     // Update local state when props change (from chart click)
@@ -251,6 +278,13 @@ export default function DepartmentStudentsTable({
             setCurrentPage(1);
         }
     }, [initialReligionFilter]);
+
+    useEffect(() => {
+        if (initialAgeFilter !== ageFilter) {
+            setAgeFilter(initialAgeFilter || '');
+            setCurrentPage(1);
+        }
+    }, [initialAgeFilter]);
 
     // Cleanup timeout on unmount
     useEffect(() => {
@@ -304,7 +338,7 @@ export default function DepartmentStudentsTable({
             </CardHeader>
             <CardContent>
                 {/* Active Filter Banner */}
-                {(genderFilter || religionFilter || search) && (
+                {(genderFilter || religionFilter || ageFilter || search) && (
                     <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -318,6 +352,11 @@ export default function DepartmentStudentsTable({
                                     {religionFilter && (
                                         <span className="ml-1">
                                             Agama: <strong>{religionFilter}</strong>
+                                        </span>
+                                    )}
+                                    {ageFilter && (
+                                        <span className="ml-1">
+                                            Umur: <strong>{ageFilter} tahun</strong>
                                         </span>
                                     )}
                                     {search && (
@@ -381,7 +420,22 @@ export default function DepartmentStudentsTable({
                             </select>
                         </div>
 
-                        {(search || genderFilter || religionFilter) && (
+                        {/* Age filter dropdown */}
+                        <div className="w-full md:w-48">
+                            <select
+                                value={ageFilter}
+                                onChange={(e) => handleAgeFilterChange(e.target.value)}
+                                className="w-full rounded-md border border-gray-300 px-3 py-2 focus:border-transparent focus:ring-2 focus:ring-blue-500"
+                            >
+                                {ageOptions.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {(search || genderFilter || religionFilter || ageFilter) && (
                             <Button variant="outline" onClick={clearFilters}>
                                 Reset Filter
                             </Button>
@@ -404,6 +458,7 @@ export default function DepartmentStudentsTable({
                         {search && ` untuk pencarian "${search}"`}
                         {genderFilter && ` dengan filter ${genderFilter === 'laki' ? 'Laki-laki' : 'Perempuan'}`}
                         {religionFilter && ` dengan agama ${religionFilter}`}
+                        {ageFilter && ` dengan umur ${ageFilter} tahun`}
                     </div>
                 )}
 
@@ -419,6 +474,7 @@ export default function DepartmentStudentsTable({
                                     <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Angkatan</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Gender</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Agama</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Umur</th>
                                     <th className="px-4 py-3 text-left text-xs font-medium tracking-wider text-gray-500 uppercase">Status</th>
                                 </tr>
                             </thead>
@@ -439,6 +495,20 @@ export default function DepartmentStudentsTable({
                                         <td className="px-4 py-4 text-sm whitespace-nowrap text-gray-900">
                                             {student.Religion_Display_Name || 'Lainnya'}
                                         </td>
+                                        <td className="px-4 py-4 text-sm whitespace-nowrap text-gray-900">
+                                            <div className="flex flex-col">
+                                                <span className="font-medium">{student.Age ? `${student.Age} tahun` : student.Age_Range || '-'}</span>
+                                                {student.Birth_Date && (
+                                                    <span className="mt-0.5 text-xs text-gray-500">
+                                                        {new Date(student.Birth_Date).toLocaleDateString('id-ID', {
+                                                            day: '2-digit',
+                                                            month: '2-digit',
+                                                            year: 'numeric',
+                                                        })}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </td>
                                         <td className="px-4 py-4 whitespace-nowrap">
                                             <Badge variant={getStatusBadgeVariant(student.Status_Name)}>{student.Status_Name}</Badge>
                                         </td>
@@ -453,28 +523,28 @@ export default function DepartmentStudentsTable({
                 {students && students.last_page > 1 && (
                     <div className="mt-6 flex items-center justify-between">
                         <div className="text-sm text-gray-700">
-                            Menampilkan {(currentPage - 1) * students.per_page + 1} - {Math.min(currentPage * students.per_page, students.total)} dari{' '}
-                            {formatNumber(students.total)} data
+                            Menampilkan {(students.current_page - 1) * students.per_page + 1} -{' '}
+                            {Math.min(students.current_page * students.per_page, students.total)} dari {formatNumber(students.total)} data
                         </div>
                         <div className="flex gap-2">
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handlePageChange(currentPage - 1)}
-                                disabled={currentPage <= 1 || loading}
+                                onClick={() => handlePageChange(students.current_page - 1)}
+                                disabled={students.current_page <= 1 || loading}
                             >
                                 Previous
                             </Button>
 
                             <span className="px-3 py-1 text-sm">
-                                Page {currentPage} of {students.last_page}
+                                Page {students.current_page} of {students.last_page}
                             </span>
 
                             <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => handlePageChange(currentPage + 1)}
-                                disabled={currentPage >= students.last_page || loading}
+                                onClick={() => handlePageChange(students.current_page + 1)}
+                                disabled={students.current_page >= students.last_page || loading}
                             >
                                 Next
                             </Button>
@@ -487,9 +557,11 @@ export default function DepartmentStudentsTable({
                     <div className="py-12 text-center">
                         <Users className="mx-auto mb-4 h-12 w-12 text-gray-400" />
                         <p className="text-gray-500">
-                            {search || genderFilter || religionFilter ? 'Tidak ada mahasiswa yang sesuai dengan filter' : 'Tidak ada data mahasiswa'}
+                            {search || genderFilter || religionFilter || ageFilter
+                                ? 'Tidak ada mahasiswa yang sesuai dengan filter'
+                                : 'Tidak ada data mahasiswa'}
                         </p>
-                        {(search || genderFilter || religionFilter) && (
+                        {(search || genderFilter || religionFilter || ageFilter) && (
                             <button onClick={clearFilters} className="mt-2 text-sm text-blue-600 hover:text-blue-800">
                                 Reset semua filter
                             </button>
