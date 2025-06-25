@@ -385,17 +385,47 @@ class DepartmentDetailService
       /**
      * Mendapatkan daftar mahasiswa dengan pagination
      */
-    public function getDepartmentStudents($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter,  $religionFilter = null)
+    public function getDepartmentStudents(
+        $departmentId, 
+        $termYearId, 
+        $studentStatus, 
+        $search, 
+        $page, 
+        $perPage, 
+        $genderFilter,  
+        $religionFilter = null,
+        $ageFilter = null    
+    )
     {
-        // Don't cache paginated results with search, only cache when no search
         if (!$this->useCache || !empty($search)) {
             return $this->executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter, $religionFilter);
+        // Age filter - NEW
+            if ($ageFilter) {
+                $query->whereNotNull('acd_student.Birth_Date');
+                
+                switch ($ageFilter) {
+                    case '17-19':
+                        $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 17 AND 19');
+                        break;
+                    case '20-22':
+                        $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 20 AND 22');
+                        break;
+                    case '23-25':
+                        $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 23 AND 25');
+                        break;
+                    case '26-30':
+                        $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 26 AND 30');
+                        break;
+                    case '> 30':
+                        $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) > 30');
+                        break;
+                }
+            }
         }
-
-        $cacheKey = "department-students-{$departmentId}-{$termYearId}-{$studentStatus}-{$page}-{$perPage}-{$genderFilter}-{$religionFilter}";
+        $cacheKey = "department-students-{$departmentId}-{$termYearId}-{$studentStatus}-{$page}-{$perPage}-{$genderFilter}-{$religionFilter}-{$ageFilter}";
         
-        return Cache::remember($cacheKey, $this->cacheDuration, function () use ($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter, $religionFilter) {
-            return $this->executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter, $religionFilter);
+        return Cache::remember($cacheKey, $this->cacheDuration, function () use ($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter, $religionFilter, $ageFilter) {
+            return $this->executeDepartmentStudentsQuery($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter, $religionFilter, $ageFilter);
         });
     }
     

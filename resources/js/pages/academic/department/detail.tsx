@@ -16,11 +16,13 @@ export default function DepartmentStudentDetail() {
     const urlParams = new URLSearchParams(window.location.search);
     const initialTab = urlParams.get('tab') || 'overview';
     const initialGenderFilter = urlParams.get('gender') || '';
-    const initialReligionFilter = urlParams.get('religion') || ''; // Add religion filter
+    const initialReligionFilter = urlParams.get('religion') || '';
+    const initialAgeFilter = urlParams.get('age') || ''; // Add age filter
 
     const [activeTab, setActiveTab] = useState(initialTab);
     const [genderFilter, setGenderFilter] = useState<string>(initialGenderFilter);
-    const [religionFilter, setReligionFilter] = useState<string>(initialReligionFilter); // Add religion state
+    const [religionFilter, setReligionFilter] = useState<string>(initialReligionFilter);
+    const [ageFilter, setAgeFilter] = useState<string>(initialAgeFilter); // Add age state
 
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
@@ -59,7 +61,7 @@ export default function DepartmentStudentDetail() {
             student_status: selectedStatus,
         };
 
-        // Add current URL params to preserve tab, gender, and religion filter
+        // Add current URL params to preserve tab, gender, religion, and age filter
         if (currentParams.get('tab')) {
             queryParams.tab = currentParams.get('tab');
         }
@@ -69,6 +71,9 @@ export default function DepartmentStudentDetail() {
         if (currentParams.get('religion')) {
             queryParams.religion = currentParams.get('religion');
         }
+        if (currentParams.get('age')) {
+            queryParams.age = currentParams.get('age');
+        }
 
         router.visit(route('academic.department.detail', queryParams), {
             preserveState: true,
@@ -76,7 +81,7 @@ export default function DepartmentStudentDetail() {
         });
     };
 
-    const updateURL = (tab: string, gender?: string, religion?: string) => {
+    const updateURL = (tab: string, gender?: string, religion?: string, age?: string) => {
         const url = new URL(window.location.href);
 
         // Update tab parameter
@@ -100,15 +105,23 @@ export default function DepartmentStudentDetail() {
             url.searchParams.delete('religion');
         }
 
+        // Update age parameter
+        if (age && age !== '') {
+            url.searchParams.set('age', age);
+        } else {
+            url.searchParams.delete('age');
+        }
+
         // Update URL without page reload
         window.history.replaceState({}, '', url.toString());
     };
 
-    const handleTabChange = (tab: string, genderFilterParam?: string, religionFilterParam?: string) => {
+    const handleTabChange = (tab: string, genderFilterParam?: string, religionFilterParam?: string, ageFilterParam?: string) => {
         setActiveTab(tab);
 
         let newGenderFilter = genderFilter;
         let newReligionFilter = religionFilter;
+        let newAgeFilter = ageFilter;
 
         if (genderFilterParam) {
             newGenderFilter = genderFilterParam;
@@ -126,7 +139,15 @@ export default function DepartmentStudentDetail() {
             setReligionFilter('');
         }
 
-        updateURL(tab, newGenderFilter, newReligionFilter);
+        if (ageFilterParam) {
+            newAgeFilter = ageFilterParam;
+            setAgeFilter(ageFilterParam);
+        } else if (tab !== 'students') {
+            newAgeFilter = '';
+            setAgeFilter('');
+        }
+
+        updateURL(tab, newGenderFilter, newReligionFilter, newAgeFilter);
     };
 
     // Handle browser back/forward navigation
@@ -136,10 +157,12 @@ export default function DepartmentStudentDetail() {
             const tabFromUrl = urlParams.get('tab') || 'overview';
             const genderFromUrl = urlParams.get('gender') || '';
             const religionFromUrl = urlParams.get('religion') || '';
+            const ageFromUrl = urlParams.get('age') || '';
 
             setActiveTab(tabFromUrl);
             setGenderFilter(genderFromUrl);
             setReligionFilter(religionFromUrl);
+            setAgeFilter(ageFromUrl);
         };
 
         window.addEventListener('popstate', handlePopState);
@@ -186,6 +209,7 @@ export default function DepartmentStudentDetail() {
                     onTabChange={handleTabChange}
                     genderFilter={genderFilter}
                     religionFilter={religionFilter} // Pass religion filter
+                    ageFilter={ageFilter} // Pass age filter
                 />
             </div>
         </AppLayout>

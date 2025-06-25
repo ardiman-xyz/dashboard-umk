@@ -63,9 +63,10 @@ interface DepartmentContentTabsProps {
     termYearId: string;
     studentStatus: string;
     activeTab?: string;
-    onTabChange?: (tab: string, genderFilter?: string, religionFilter?: string) => void;
+    onTabChange?: (tab: string, genderFilter?: string, religionFilter?: string, ageFilter?: string) => void;
     genderFilter?: string;
     religionFilter?: string; // Add religion filter prop
+    ageFilter?: string;
 }
 
 export default function DepartmentContentTabs({
@@ -78,6 +79,7 @@ export default function DepartmentContentTabs({
     onTabChange,
     genderFilter,
     religionFilter, // Add religion filter
+    ageFilter,
 }: DepartmentContentTabsProps) {
     const handleGenderClick = (gender: 'laki' | 'perempuan') => {
         // Switch to students tab and set gender filter when gender is clicked
@@ -90,6 +92,13 @@ export default function DepartmentContentTabs({
         // Switch to students tab and set religion filter when religion is clicked
         if (onTabChange) {
             onTabChange('students', undefined, religion); // Pass religion as third parameter
+        }
+    };
+
+    const handleAgeClick = (age: string) => {
+        // Switch to students tab and set age filter when age is clicked
+        if (onTabChange) {
+            onTabChange('students', undefined, undefined, age); // Pass age as fourth parameter
         }
     };
 
@@ -115,6 +124,7 @@ export default function DepartmentContentTabs({
                     studentStatus={studentStatus} // Pass studentStatus
                     onGenderClick={handleGenderClick}
                     onReligionClick={handleReligionClick} // Add religion click handler
+                    onAgeClick={handleAgeClick}
                 />
             </TabsContent>
 
@@ -148,6 +158,7 @@ export default function DepartmentContentTabs({
                     studentStatus={studentStatus}
                     initialGenderFilter={genderFilter}
                     initialReligionFilter={religionFilter} // Pass religion filter
+                    initialAgeFilter={ageFilter}
                 />
             </TabsContent>
         </Tabs>

@@ -295,6 +295,7 @@ class AcademicDataController extends Controller
         $this->departmentDetailService->setCacheEnabled($useCache);
 
         $religionFilter = $request->input('religion', null);
+        $ageFilter = $request->input('age', null);
         
 
         $students = $this->departmentDetailService->getDepartmentStudents(
@@ -305,8 +306,11 @@ class AcademicDataController extends Controller
             $page, 
             $perPage,
             $genderFilter,
-            $religionFilter
+            $religionFilter,
+            $ageFilter
         );
+
+        dd($students);
 
         return response()->json([
             'students' => $students,
@@ -315,7 +319,8 @@ class AcademicDataController extends Controller
                 'student_status' => $studentStatus,
                 'search' => $search,
                 'gender_filter' => $genderFilter,
-                'religion_filter' => $religionFilter
+                'religion_filter' => $religionFilter,
+                'age_filter' => $ageFilter
             ]
         ]);
     }

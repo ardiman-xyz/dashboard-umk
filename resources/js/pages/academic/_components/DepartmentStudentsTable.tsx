@@ -35,7 +35,8 @@ interface DepartmentStudentsTableProps {
     termYearId: string;
     studentStatus: string;
     initialGenderFilter?: string;
-    initialReligionFilter?: string; // Add religion filter prop
+    initialReligionFilter?: string;
+    initialAgeFilter?: string; // Add religion filter prop
 }
 
 export default function DepartmentStudentsTable({
@@ -44,6 +45,7 @@ export default function DepartmentStudentsTable({
     studentStatus,
     initialGenderFilter,
     initialReligionFilter,
+    initialAgeFilter,
 }: DepartmentStudentsTableProps) {
     const [students, setStudents] = useState<StudentData | null>(null);
     const [loading, setLoading] = useState(true);
@@ -52,6 +54,7 @@ export default function DepartmentStudentsTable({
     const [religionFilter, setReligionFilter] = useState(initialReligionFilter || ''); // Add religion state
     const [currentPage, setCurrentPage] = useState(1);
     const [debounceTimeout, setDebounceTimeout] = useState<NodeJS.Timeout | null>(null);
+    const [ageFilter, setAgeFilter] = useState(initialAgeFilter || '');
 
     // Method to update URL using Inertia router
     const updateURLWithInertia = (newGenderFilter: string, newReligionFilter: string, newSearch: string = search) => {
@@ -141,6 +144,15 @@ export default function DepartmentStudentsTable({
             setLoading(false);
         }
     };
+
+    const ageOptions = [
+        { value: '', label: 'Semua Umur' },
+        { value: '17-19', label: '17-19 tahun' },
+        { value: '20-22', label: '20-22 tahun' },
+        { value: '23-25', label: '23-25 tahun' },
+        { value: '26-30', label: '26-30 tahun' },
+        { value: '> 30', label: '> 30 tahun' },
+    ];
 
     // Handle gender filter change with URL update
     const handleGenderFilterChange = (selectedGender: string) => {
