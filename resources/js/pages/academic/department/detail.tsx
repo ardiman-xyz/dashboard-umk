@@ -75,6 +75,7 @@ export default function DepartmentStudentDetail() {
             queryParams.age = currentParams.get('age');
         }
 
+
         router.visit(route('academic.department.detail', queryParams), {
             preserveState: true,
             onFinish: () => setIsFiltering(false),

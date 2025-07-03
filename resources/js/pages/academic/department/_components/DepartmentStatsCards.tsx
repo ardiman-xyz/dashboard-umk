@@ -30,12 +30,27 @@ export default function DepartmentStatsCards({ totalStudents, genderDistribution
     };
 
     const calculateGenderPercentage = () => {
-        if (totalStudents === 0) return { male: 0, female: 0 };
+        const lakiCount = Number(genderDistribution.laki) || 0;
+        const perempuanCount = Number(genderDistribution.perempuan) || 0;
+        const total = lakiCount + perempuanCount;
 
-        return {
-            male: Math.round((genderDistribution.laki / totalStudents) * 100),
-            female: Math.round((genderDistribution.perempuan / totalStudents) * 100),
-        };
+        if (total === 0) return { male: 0, female: 0 };
+
+        const malePercent = Math.round((lakiCount / total) * 100);
+        const femalePercent = Math.round((perempuanCount / total) * 100);
+
+        // Ensure percentages add up to 100%
+        if (malePercent + femalePercent !== 100 && total > 0) {
+            // Adjust for rounding errors
+            const diff = 100 - (malePercent + femalePercent);
+            if (lakiCount >= perempuanCount) {
+                return { male: malePercent + diff, female: femalePercent };
+            } else {
+                return { male: malePercent, female: femalePercent + diff };
+            }
+        }
+
+        return { male: malePercent, female: femalePercent };
     };
 
     const genderPercentage = calculateGenderPercentage();

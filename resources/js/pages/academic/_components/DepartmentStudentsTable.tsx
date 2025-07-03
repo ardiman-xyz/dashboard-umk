@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 interface Student {
     Student_Id: string;
     Full_Name: string;
+    Nim: string;
     Entry_Year_Id: string | number;
     Register_Status_Id: string;
     Gender_Id: number;
@@ -51,12 +52,13 @@ export default function DepartmentStudentsTable({
     initialAgeFilter,
 }: DepartmentStudentsTableProps) {
     const [students, setStudents] = useState<StudentData | null>(null);
+    console.info(students);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [genderFilter, setGenderFilter] = useState(initialGenderFilter || '');
     const [religionFilter, setReligionFilter] = useState(initialReligionFilter || '');
     const [ageFilter, setAgeFilter] = useState(initialAgeFilter || '');
-    const [currentPage, setCurrentPage] = useState(1);
+    // const [currentPage, setCurrentPage] = useState(1);
     const [debounceTimeout, setDebounceTimeout] = useState<NodeJS.Timeout | null>(null);
 
     // Method to update URL using Inertia router
@@ -115,7 +117,7 @@ export default function DepartmentStudentsTable({
                 term_year_id: termYearId,
                 student_status: studentStatus,
                 page: page,
-                per_page: 20,
+                per_page: 10,
             };
 
             if (searchQuery.trim()) {
@@ -134,24 +136,24 @@ export default function DepartmentStudentsTable({
                 params.age = selectedAge;
             }
 
-            console.log('API Request params:', params);
-
             const response = await axios.get(`/academic/department/${departmentId}/students`, {
                 params,
             });
 
             const apiResponse: ApiResponse = response.data;
-            setStudents(apiResponse.students);
-            setCurrentPage(parseInt(apiResponse.students.current_page.toString()));
+
+            // Convert string values to numbers
+            const studentsData: StudentData = {
+                ...apiResponse.students,
+                current_page: Number(apiResponse.students.current_page),
+                per_page: Number(apiResponse.students.per_page),
+                last_page: Number(apiResponse.students.last_page),
+                total: Number(apiResponse.students.total),
+            };
+
+            setStudents(studentsData);
         } catch (error) {
-            console.error('Error loading students:', error);
-            setStudents({
-                data: [],
-                total: 0,
-                per_page: 20,
-                current_page: 1,
-                last_page: 1,
-            });
+            // ... error handling
         } finally {
             setLoading(false);
         }
@@ -166,26 +168,17 @@ export default function DepartmentStudentsTable({
         { value: '> 30', label: '> 30 tahun' },
     ];
 
-    // Handle gender filter change with URL update
     const handleGenderFilterChange = (selectedGender: string) => {
         console.log('Gender filter changed to:', selectedGender);
-
         setGenderFilter(selectedGender);
-        setCurrentPage(1);
-
-        // Update URL immediately when filter changes
+        // Remove:
         updateURLWithInertia(selectedGender, religionFilter, ageFilter);
-
-        // Load new data
         loadStudents(1, search, selectedGender, religionFilter, ageFilter);
     };
 
     // Handle religion filter change with URL update
     const handleReligionFilterChange = (selectedReligion: string) => {
-        console.log('Religion filter changed to:', selectedReligion);
-
         setReligionFilter(selectedReligion);
-        setCurrentPage(1);
 
         // Update URL immediately when filter changes
         updateURLWithInertia(genderFilter, selectedReligion, ageFilter);
@@ -196,10 +189,7 @@ export default function DepartmentStudentsTable({
 
     // Handle age filter change with URL update
     const handleAgeFilterChange = (selectedAge: string) => {
-        console.log('Age filter changed to:', selectedAge);
-
         setAgeFilter(selectedAge);
-        setCurrentPage(1);
 
         // Update URL immediately when filter changes
         updateURLWithInertia(genderFilter, religionFilter, selectedAge);
@@ -220,7 +210,6 @@ export default function DepartmentStudentsTable({
 
         // Set new timeout for debounced search
         const timeout = setTimeout(() => {
-            setCurrentPage(1);
             updateURLWithInertia(genderFilter, religionFilter, ageFilter, newSearch);
             loadStudents(1, newSearch, genderFilter, religionFilter, ageFilter);
         }, 500);
@@ -234,7 +223,6 @@ export default function DepartmentStudentsTable({
         setGenderFilter('');
         setReligionFilter('');
         setAgeFilter('');
-        setCurrentPage(1);
 
         // Update URL by removing filter parameters
         updateURLWithInertia('', '', '', '');
@@ -245,17 +233,7 @@ export default function DepartmentStudentsTable({
 
     // Handle pagination with URL update
     const handlePageChange = (page: number) => {
-        setCurrentPage(page);
-
-        // Update URL with new page (optional, if you want page in URL)
-        const url = new URL(window.location.href);
-        if (page > 1) {
-            url.searchParams.set('page', page.toString());
-        } else {
-            url.searchParams.delete('page');
-        }
-        window.history.replaceState({}, '', url.toString());
-
+        // Don't update local state, just load the new page
         loadStudents(page, search, genderFilter, religionFilter, ageFilter);
     };
 
@@ -268,21 +246,18 @@ export default function DepartmentStudentsTable({
     useEffect(() => {
         if (initialGenderFilter !== genderFilter) {
             setGenderFilter(initialGenderFilter || '');
-            setCurrentPage(1);
         }
     }, [initialGenderFilter]);
 
     useEffect(() => {
         if (initialReligionFilter !== religionFilter) {
             setReligionFilter(initialReligionFilter || '');
-            setCurrentPage(1);
         }
     }, [initialReligionFilter]);
 
     useEffect(() => {
         if (initialAgeFilter !== ageFilter) {
             setAgeFilter(initialAgeFilter || '');
-            setCurrentPage(1);
         }
     }, [initialAgeFilter]);
 
@@ -482,9 +457,9 @@ export default function DepartmentStudentsTable({
                                 {students?.data.map((student, index) => (
                                     <tr key={student.Student_Id} className="hover:bg-gray-50">
                                         <td className="px-4 py-4 text-sm whitespace-nowrap text-gray-900">
-                                            {(currentPage - 1) * students.per_page + index + 1}
+                                            {(students.current_page - 1) * students.per_page + index + 1}
                                         </td>
-                                        <td className="px-4 py-4 font-mono text-sm whitespace-nowrap">{student.Student_Id}</td>
+                                        <td className="px-4 py-4 font-mono text-sm whitespace-nowrap">{student.Nim}</td>
                                         <td className="px-4 py-4 whitespace-nowrap">
                                             <div className="font-medium text-gray-900">{student.Full_Name}</div>
                                         </td>
@@ -530,6 +505,7 @@ export default function DepartmentStudentsTable({
                             <Button
                                 variant="outline"
                                 size="sm"
+                                className="cursor-pointer"
                                 onClick={() => handlePageChange(students.current_page - 1)}
                                 disabled={students.current_page <= 1 || loading}
                             >
@@ -545,6 +521,7 @@ export default function DepartmentStudentsTable({
                                 size="sm"
                                 onClick={() => handlePageChange(students.current_page + 1)}
                                 disabled={students.current_page >= students.last_page || loading}
+                                className="cursor-pointer"
                             >
                                 Next
                             </Button>

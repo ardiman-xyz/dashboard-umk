@@ -16,6 +16,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
+use Inertia\Response;
 
 
 class AcademicDataController extends Controller
@@ -32,7 +33,7 @@ class AcademicDataController extends Controller
     protected DepartmentDetailService $departmentDetailService;
 
     public function __construct(
-        StudentService $studentService, 
+        StudentService $studentService,
         AverageGpaService $averageGpaService,
         TermService $termService,
         FacultyDistributionService $facultyDistributionService,
@@ -41,7 +42,7 @@ class AcademicDataController extends Controller
         LecturerRatioService $lecturerRatioService,
         LecturerService $lecturerService,
         FacultyDetailService $facultyDetailService,
-        DepartmentDetailService $departmentDetailService 
+        DepartmentDetailService $departmentDetailService
     ) {
         $this->studentService = $studentService;
         $this->averageGpaService = $averageGpaService;
@@ -59,13 +60,13 @@ class AcademicDataController extends Controller
     {
         // Ambil term_year_id dari request
         $termYearId = $request->input('term_year_id', 'all');
-        
+
         $currentTerm = $this->termService->getCurrentTerm($termYearId);
         $availableTerms = $this->termService->getAvailableTerms();
-        
+
         // Ambil data berdasarkan termYearId
         $lecturerRatio = $this->lecturerRatioService->getLecturerRatio($termYearId);
-        $avgGpa = $termYearId === 'all' 
+        $avgGpa = $termYearId === 'all'
             ? $this->averageGpaService->getAverageGpa()
             : $this->averageGpaService->getAverageGpaByTerm($currentTerm['id']);
         $facultyDistribution = $this->facultyDistributionService->getFacultyDistributionSummary($termYearId);
@@ -73,7 +74,7 @@ class AcademicDataController extends Controller
         $gradeDistribution = $this->gradeDistributionService->getGradeDistributionSummary($termYearId);
         $lecturerCount = $this->lecturerService->getLecturerCount($termYearId);
 
-        
+
         $stats = [
             'activeStudents' => $this->studentService->getActiveStudentsCount($termYearId),
             'avgGpa' => $avgGpa,
@@ -139,85 +140,87 @@ class AcademicDataController extends Controller
             ->orderBy('Term_Year_Id', 'desc')
             ->take(15) // Limit to recent 15 terms
             ->get(['Term_Year_Id', 'Term_Year_Name']);
-        
+
         $formattedTerms = [];
-        
+
         foreach ($terms as $term) {
             $termId = $term->Term_Year_Id;
-            
+
             // Use database name if available, otherwise format it
             $termName = $term->Term_Year_Name ?? $this->formatTermName($termId);
-            
+
             // Format like "2024/Gasal", "2023/Semester Pendek Genap", etc.
             if (strlen($termId) >= 5) {
                 $year = substr($termId, 0, 4);
                 $semester = substr($termId, 4, 1);
-                
+
                 // Simplified semester naming based on the image
                 $semesterNames = [
                     '1' => 'Gasal',     // Semester Ganjil = Gasal
-                    '2' => 'Genap',     // Semester Genap = Genap  
+                    '2' => 'Genap',     // Semester Genap = Genap
                     '3' => 'Semester Pendek Genap' // Semester Pendek
                 ];
-                
+
                 $semesterName = $semesterNames[$semester] ?? $termName;
                 $displayName = $year . '/' . $semesterName;
             } else {
                 $displayName = $termName;
             }
-            
+
             $formattedTerms[] = [
                 'id' => $termId,
                 'name' => $displayName
             ];
         }
-        
+
         return $formattedTerms;
     }
 
     /**
      * Format term name from ID
      */
-    private function formatTermName($termYearId)
+    private function formatTermName($termYearId): string
     {
         if (strlen($termYearId) < 5) return $termYearId;
-        
+
         $year = (int)substr($termYearId, 0, 4);
         $term = (int)substr($termYearId, 4, 1);
-        
+
         $termNames = [
             1 => 'Ganjil',
-            2 => 'Genap', 
+            2 => 'Genap',
             3 => 'Pendek'
         ];
-        
+
         $termName = $termNames[$term] ?? 'Term ' . $term;
         return $termName . ' ' . $year . '/' . ($year + 1);
     }
 
 
     /**
-     * Halaman detail fakultas
+     * @param Request $request
+     * @param $facultyId
+     * @return Response
      */
-    public function facultyDetail(Request $request, $facultyId)
+    public function facultyDetail(Request $request, $facultyId): Response
     {
         $termYearId = $request->input('term_year_id', 'all');
         $studentStatus = $request->input('student_status', 'all');
-        
+
         // Ambil informasi fakultas
         $facultyInfo = $this->facultyDetailService->getFacultyInfo($facultyId);
-        
+
         if (!$facultyInfo) {
             abort(404, 'Fakultas tidak ditemukan');
         }
-        
+
         // Ambil data detail fakultas
         $facultyDetail = $this->facultyDetailService->getFacultyDetailData($facultyId, $termYearId, $studentStatus);
-        
+
         // Ambil data untuk filter
         $currentTerm = $this->termService->getCurrentTerm($termYearId);
         $availableTerms = $this->termService->getAvailableTerms();
-        
+
         return Inertia::render("academic/detail", [
             'facultyInfo' => $facultyInfo,
             'facultyDetail' => $facultyDetail,
@@ -234,35 +237,29 @@ class AcademicDataController extends Controller
      * Halaman detail program studi
      */
 
-    public function departmentDetail(Request $request, $departmentId)
+    public function departmentDetail(Request $request, $departmentId): Response
     {
         $termYearId = $request->input('term_year_id', 'all');
         $studentStatus = $request->input('student_status', 'all');
         $useCache = $request->input('use_cache', true);
-        
+
         // New: Handle URL parameters for UI state
         $activeTab = $request->input('tab', 'overview');
         $genderFilter = $request->input('gender', '');
-        
-        // Configure cache for the service
+
         $this->departmentDetailService->setCacheEnabled($useCache);
-        
-        // Ambil informasi program studi
         $departmentInfo = $this->departmentDetailService->getDepartmentInfo($departmentId);
-        
+
         if (!$departmentInfo) {
             abort(404, 'Program studi tidak ditemukan');
         }
-        
-        // Ambil data detail program studi
+
         $departmentDetail = $this->departmentDetailService->getDepartmentDetailData($departmentId, $termYearId, $studentStatus);
-        
-        // Ambil data untuk filter
+
         $currentTerm = $this->termService->getCurrentTerm($termYearId);
         $availableTerms = $this->termService->getAvailableTerms();
 
-    
-        
+
         return Inertia::render("academic/department/detail", [
             'departmentInfo' => $departmentInfo,
             'departmentDetail' => $departmentDetail,
@@ -273,7 +270,6 @@ class AcademicDataController extends Controller
             'termYearId' => $termYearId,
             'studentStatus' => $studentStatus,
             'useCache' => $useCache,
-            // New: Pass UI state to frontend
             'initialTab' => $activeTab,
             'initialGenderFilter' => $genderFilter
         ]);
@@ -288,7 +284,7 @@ class AcademicDataController extends Controller
         $search = $request->input('search', '');
         $page = $request->input('page', 1);
         $perPage = $request->input('per_page', 20);
-        
+
         // FIX: Gunakan 'gender' instead of 'gender_filter'
         $genderFilter = $request->input('gender', null); // Changed from 'gender_filter'
         $useCache = $request->input('use_cache', true);
@@ -296,19 +292,20 @@ class AcademicDataController extends Controller
 
         $religionFilter = $request->input('religion', null);
         $ageFilter = $request->input('age', null);
-        
+
 
         $students = $this->departmentDetailService->getDepartmentStudents(
-            $departmentId, 
-            $termYearId, 
-            $studentStatus, 
-            $search, 
-            $page, 
+            $departmentId,
+            $termYearId,
+            $studentStatus,
+            $search,
+            $page,
             $perPage,
             $genderFilter,
             $religionFilter,
             $ageFilter
         );
+
 
         return response()->json([
             'students' => $students,

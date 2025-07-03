@@ -14,7 +14,7 @@ class DepartmentDetailService
      * @var bool
      */
     protected $useCache = true;
-    
+
     /**
      * Cache duration in seconds (default: 1 hour)
      * @var int
@@ -22,8 +22,9 @@ class DepartmentDetailService
     protected $cacheDuration = 3600;
 
 
-     /**
-     * Mendapatkan informasi program studi
+    /**
+     * @param $departmentId
+     * @return mixed|object|null
      */
     public function getDepartmentInfo($departmentId)
     {
@@ -62,7 +63,7 @@ class DepartmentDetailService
         }
 
         $cacheKey = "department-detail-{$departmentId}-{$termYearId}-{$studentStatus}";
-        
+
         return Cache::remember($cacheKey, $this->cacheDuration, function () use ($departmentId, $termYearId, $studentStatus) {
             return $this->executeDepartmentDetailQuery($departmentId, $termYearId, $studentStatus);
         });
@@ -75,28 +76,28 @@ class DepartmentDetailService
     {
         // Distribusi gender
         $genderDistribution = $this->getGenderDistribution($departmentId, $termYearId, $studentStatus);
-        
+
         // Distribusi agama
         $religionDistribution = $this->getReligionDistribution($departmentId, $termYearId, $studentStatus);
-        
+
         // Distribusi umur
         $ageDistribution = $this->getAgeDistribution($departmentId, $termYearId, $studentStatus);
-        
+
         // Distribusi asal daerah
         $regionDistribution = $this->getRegionDistribution($departmentId, $termYearId, $studentStatus);
-        
+
         // Tren mahasiswa per semester
         $studentTrend = $this->getStudentTrend($departmentId);
-        
+
         // Summary stats
         $summaryStats = $this->getSummaryStats($departmentId, $termYearId, $studentStatus);
-        
+
         // Distribusi per angkatan
         $yearDistribution = $this->getYearDistribution($departmentId, $termYearId, $studentStatus);
-        
+
         // IPK Statistics
         $gpaStats = $this->getGpaStatistics($departmentId, $termYearId, $studentStatus);
-        
+
         return [
             'genderDistribution' => $genderDistribution,
             'religionDistribution' => $religionDistribution,
@@ -111,7 +112,7 @@ class DepartmentDetailService
 
 
 
-  
+
     /**
      * Distribusi gender di program studi
      */
@@ -119,13 +120,13 @@ class DepartmentDetailService
     {
         $query = DB::table('acd_student')
             ->where('acd_student.Department_Id', $departmentId);
-            
+
         // Apply same filters
         if ($studentStatus === 'active') {
-            $currentTermId = ($termYearId === 'all' || $termYearId === null) 
-                ? $this->getCurrentActiveTermId() 
+            $currentTermId = ($termYearId === 'all' || $termYearId === null)
+                ? $this->getCurrentActiveTermId()
                 : $termYearId;
-            
+
             $query->join('acd_student_krs', 'acd_student.Student_Id', '=', 'acd_student_krs.Student_Id')
                   ->where('acd_student_krs.Term_Year_Id', $currentTermId)
                   ->where('acd_student_krs.Is_Approved', '1');
@@ -133,7 +134,7 @@ class DepartmentDetailService
             $year = substr($termYearId, 0, 4);
             $query->where('acd_student.Entry_Year_Id', 'like', $year . '%');
         }
-        
+
         return $query->select(
                 DB::raw('SUM(CASE WHEN acd_student.Gender_Id = 1 THEN 1 ELSE 0 END) as laki'),
                 DB::raw('SUM(CASE WHEN acd_student.Gender_Id = 2 THEN 1 ELSE 0 END) as perempuan'),
@@ -141,7 +142,7 @@ class DepartmentDetailService
             )
             ->first();
     }
-    
+
     /**
      * Distribusi agama di program studi
      */
@@ -150,13 +151,13 @@ class DepartmentDetailService
         $query = DB::table('acd_student')
             ->leftJoin('mstr_religion', 'acd_student.Religion_Id', '=', 'mstr_religion.Religion_Id')
             ->where('acd_student.Department_Id', $departmentId);
-            
+
         // Apply same filters
         if ($studentStatus === 'active') {
-            $currentTermId = ($termYearId === 'all' || $termYearId === null) 
-                ? $this->getCurrentActiveTermId() 
+            $currentTermId = ($termYearId === 'all' || $termYearId === null)
+                ? $this->getCurrentActiveTermId()
                 : $termYearId;
-            
+
             $query->join('acd_student_krs', 'acd_student.Student_Id', '=', 'acd_student_krs.Student_Id')
                   ->where('acd_student_krs.Term_Year_Id', $currentTermId)
                   ->where('acd_student_krs.Is_Approved', '1');
@@ -164,24 +165,24 @@ class DepartmentDetailService
             $year = substr($termYearId, 0, 4);
             $query->where('acd_student.Entry_Year_Id', 'like', $year . '%');
         }
-        
+
         return $query->select(
-                DB::raw('CASE 
-                    WHEN mstr_religion.Religion_Name IS NULL THEN "Lainnya" 
-                    ELSE mstr_religion.Religion_Name 
+                DB::raw('CASE
+                    WHEN mstr_religion.Religion_Name IS NULL THEN "Lainnya"
+                    ELSE mstr_religion.Religion_Name
                 END as name'),
                 DB::raw('COUNT(acd_student.Student_Id) as value')
             )
             ->groupBy(
-                DB::raw('CASE 
-                    WHEN mstr_religion.Religion_Name IS NULL THEN "Lainnya" 
-                    ELSE mstr_religion.Religion_Name 
+                DB::raw('CASE
+                    WHEN mstr_religion.Religion_Name IS NULL THEN "Lainnya"
+                    ELSE mstr_religion.Religion_Name
                 END')
             )
             ->orderBy('value', 'desc')
             ->get();
     }
-    
+
     /**
      * Distribusi umur di program studi
      */
@@ -190,13 +191,13 @@ class DepartmentDetailService
         $query = DB::table('acd_student')
             ->where('acd_student.Department_Id', $departmentId)
             ->whereNotNull('acd_student.Birth_Date');
-            
+
         // Apply same filters
         if ($studentStatus === 'active') {
-            $currentTermId = ($termYearId === 'all' || $termYearId === null) 
-                ? $this->getCurrentActiveTermId() 
+            $currentTermId = ($termYearId === 'all' || $termYearId === null)
+                ? $this->getCurrentActiveTermId()
                 : $termYearId;
-            
+
             $query->join('acd_student_krs', 'acd_student.Student_Id', '=', 'acd_student_krs.Student_Id')
                   ->where('acd_student_krs.Term_Year_Id', $currentTermId)
                   ->where('acd_student_krs.Is_Approved', '1');
@@ -204,10 +205,10 @@ class DepartmentDetailService
             $year = substr($termYearId, 0, 4);
             $query->where('acd_student.Entry_Year_Id', 'like', $year . '%');
         }
-        
+
         return $query->select(
                 DB::raw('
-                    CASE 
+                    CASE
                         WHEN TIMESTAMPDIFF(YEAR, Birth_Date, CURDATE()) BETWEEN 17 AND 19 THEN "17-19"
                         WHEN TIMESTAMPDIFF(YEAR, Birth_Date, CURDATE()) BETWEEN 20 AND 22 THEN "20-22"
                         WHEN TIMESTAMPDIFF(YEAR, Birth_Date, CURDATE()) BETWEEN 23 AND 25 THEN "23-25"
@@ -228,7 +229,7 @@ class DepartmentDetailService
                 ];
             });
     }
-    
+
     /**
      * Distribusi asal daerah di program studi
      */
@@ -236,13 +237,13 @@ class DepartmentDetailService
     {
         $query = DB::table('acd_student')
             ->where('acd_student.Department_Id', $departmentId);
-            
+
         // Apply same filters
         if ($studentStatus === 'active') {
-            $currentTermId = ($termYearId === 'all' || $termYearId === null) 
-                ? $this->getCurrentActiveTermId() 
+            $currentTermId = ($termYearId === 'all' || $termYearId === null)
+                ? $this->getCurrentActiveTermId()
                 : $termYearId;
-            
+
             $query->join('acd_student_krs', 'acd_student.Student_Id', '=', 'acd_student_krs.Student_Id')
                   ->where('acd_student_krs.Term_Year_Id', $currentTermId)
                   ->where('acd_student_krs.Is_Approved', '1');
@@ -250,24 +251,24 @@ class DepartmentDetailService
             $year = substr($termYearId, 0, 4);
             $query->where('acd_student.Entry_Year_Id', 'like', $year . '%');
         }
-        
+
         return $query->select(
                 DB::raw('
-                    CASE 
-                        WHEN UPPER(COALESCE(Birth_Place, "")) LIKE "%KENDARI%" 
-                          OR UPPER(COALESCE(Birth_Place, "")) LIKE "%BAUBAU%" 
-                          OR UPPER(COALESCE(Birth_Place, "")) LIKE "%SULTRA%" 
-                          OR UPPER(COALESCE(Birth_Place, "")) LIKE "%SULAWESI TENGGARA%" 
+                    CASE
+                        WHEN UPPER(COALESCE(Birth_Place, "")) LIKE "%KENDARI%"
+                          OR UPPER(COALESCE(Birth_Place, "")) LIKE "%BAUBAU%"
+                          OR UPPER(COALESCE(Birth_Place, "")) LIKE "%SULTRA%"
+                          OR UPPER(COALESCE(Birth_Place, "")) LIKE "%SULAWESI TENGGARA%"
                         THEN "Sulawesi Tenggara"
-                        WHEN UPPER(COALESCE(Birth_Place, "")) LIKE "%MAKASSAR%" 
-                          OR UPPER(COALESCE(Birth_Place, "")) LIKE "%SULSEL%" 
-                          OR UPPER(COALESCE(Birth_Place, "")) LIKE "%SULAWESI SELATAN%" 
+                        WHEN UPPER(COALESCE(Birth_Place, "")) LIKE "%MAKASSAR%"
+                          OR UPPER(COALESCE(Birth_Place, "")) LIKE "%SULSEL%"
+                          OR UPPER(COALESCE(Birth_Place, "")) LIKE "%SULAWESI SELATAN%"
                         THEN "Sulawesi Selatan"
-                        WHEN UPPER(COALESCE(Birth_Place, "")) LIKE "%PALU%" 
-                          OR UPPER(COALESCE(Birth_Place, "")) LIKE "%SULTENG%" 
-                          OR UPPER(COALESCE(Birth_Place, "")) LIKE "%SULAWESI TENGAH%" 
+                        WHEN UPPER(COALESCE(Birth_Place, "")) LIKE "%PALU%"
+                          OR UPPER(COALESCE(Birth_Place, "")) LIKE "%SULTENG%"
+                          OR UPPER(COALESCE(Birth_Place, "")) LIKE "%SULAWESI TENGAH%"
                         THEN "Sulawesi Tengah"
-                        WHEN Birth_Place IS NULL OR Birth_Place = "" OR TRIM(Birth_Place) = "" 
+                        WHEN Birth_Place IS NULL OR Birth_Place = "" OR TRIM(Birth_Place) = ""
                         THEN "Tidak Diketahui"
                         ELSE "Daerah Lainnya"
                     END as name
@@ -284,7 +285,41 @@ class DepartmentDetailService
                 ];
             });
     }
-    
+
+    /**
+     * Summary statistics program studi
+     */
+    private function getSummaryStats($departmentId, $termYearId, $studentStatus)
+    {
+        $query = DB::table('acd_student')
+            ->where('acd_student.Department_Id', $departmentId);
+
+        // Apply filters based on different conditions
+        if ($studentStatus === 'active' && ($termYearId === 'all' || $termYearId === null)) {
+            // Case 1: Active students with no specific term (use current active term)
+            $currentTermId = $this->getCurrentActiveTermId();
+
+            $query->join('acd_student_krs', 'acd_student.Student_Id', '=', 'acd_student_krs.Student_Id')
+                ->where('acd_student_krs.Term_Year_Id', $currentTermId)
+                ->where('acd_student_krs.Is_Approved', '1');
+        } elseif ($studentStatus === 'active' && $termYearId !== 'all' && $termYearId !== null) {
+
+            $query->join('acd_student_krs', 'acd_student.Student_Id', '=', 'acd_student_krs.Student_Id')
+                ->where('acd_student_krs.Term_Year_Id', $termYearId)
+                ->where('acd_student_krs.Is_Approved', '1');
+        } elseif ($termYearId !== 'all' && $termYearId !== null) {
+            // Case 3: All students (not just active) filtered by entry year
+            $year = substr($termYearId, 0, 4);
+            $query->where('acd_student.Entry_Year_Id', 'like', $year . '%');
+        }
+
+        $total = $query->distinct()->count('acd_student.Student_Id');
+
+        return [
+            'total_students' => $total
+        ];
+    }
+
     /**
      * Tren mahasiswa per semester untuk program studi
      */
@@ -305,50 +340,28 @@ class DepartmentDetailService
             ->take(10)
             ->get();
     }
-    
+
+
     /**
-     * Summary statistics program studi
-     */
-    private function getSummaryStats($departmentId, $termYearId, $studentStatus)
-    {
-        $query = DB::table('acd_student')
-            ->where('acd_student.Department_Id', $departmentId);
-            
-        // Apply same filters
-        if ($studentStatus === 'active') {
-            $currentTermId = ($termYearId === 'all' || $termYearId === null) 
-                ? $this->getCurrentActiveTermId() 
-                : $termYearId;
-            
-            $query->join('acd_student_krs', 'acd_student.Student_Id', '=', 'acd_student_krs.Student_Id')
-                  ->where('acd_student_krs.Term_Year_Id', $currentTermId)
-                  ->where('acd_student_krs.Is_Approved', '1');
-        } elseif ($termYearId !== 'all' && $termYearId !== null) {
-            $year = substr($termYearId, 0, 4);
-            $query->where('acd_student.Entry_Year_Id', 'like', $year . '%');
-        }
-        
-        $total = $query->count('acd_student.Student_Id');
-        
-        return [
-            'total_students' => $total
-        ];
-    }
-    
-    /**
+     * @param $departmentId
+     * @param $termYearId
+     * @param $studentStatus
+     * @return array
+
+
      * Distribusi mahasiswa per angkatan
      */
     private function getYearDistribution($departmentId, $termYearId, $studentStatus)
     {
         $query = DB::table('acd_student')
             ->where('acd_student.Department_Id', $departmentId);
-            
+
         // Apply same filters
         if ($studentStatus === 'active') {
-            $currentTermId = ($termYearId === 'all' || $termYearId === null) 
-                ? $this->getCurrentActiveTermId() 
+            $currentTermId = ($termYearId === 'all' || $termYearId === null)
+                ? $this->getCurrentActiveTermId()
                 : $termYearId;
-            
+
             $query->join('acd_student_krs', 'acd_student.Student_Id', '=', 'acd_student_krs.Student_Id')
                   ->where('acd_student_krs.Term_Year_Id', $currentTermId)
                   ->where('acd_student_krs.Is_Approved', '1');
@@ -356,7 +369,7 @@ class DepartmentDetailService
             $year = substr($termYearId, 0, 4);
             $query->where('acd_student.Entry_Year_Id', 'like', $year . '%');
         }
-        
+
         return $query->select(
                 DB::raw('LEFT(Entry_Year_Id, 4) as year'),
                 DB::raw('COUNT(acd_student.Student_Id) as student_count')
@@ -367,7 +380,7 @@ class DepartmentDetailService
             ->take(10)
             ->get();
     }
-    
+
     /**
      * Statistik IPK program studi
      */
@@ -386,53 +399,53 @@ class DepartmentDetailService
      * Mendapatkan daftar mahasiswa dengan pagination
      */
     public function getDepartmentStudents(
-        $departmentId, 
-        $termYearId, 
-        $studentStatus, 
-        $search, 
-        $page, 
-        $perPage, 
-        $genderFilter = null,  
+        $departmentId,
+        $termYearId,
+        $studentStatus,
+        $search,
+        $page,
+        $perPage,
+        $genderFilter = null,
         $religionFilter = null,
-        $ageFilter = null    
+        $ageFilter = null
     )
     {
         // Jangan gunakan cache jika ada search atau filter yang aktif
         if (!$this->useCache || !empty($search) || $genderFilter || $religionFilter || $ageFilter) {
             return $this->executeDepartmentStudentsQuery(
-                $departmentId, $termYearId, $studentStatus, $search, 
+                $departmentId, $termYearId, $studentStatus, $search,
                 $page, $perPage, $genderFilter, $religionFilter, $ageFilter
             );
         }
-    
+
         $cacheKey = "department-students-{$departmentId}-{$termYearId}-{$studentStatus}-{$page}-{$perPage}-{$genderFilter}-{$religionFilter}-{$ageFilter}";
-        
+
         return Cache::remember($cacheKey, $this->cacheDuration, function () use ($departmentId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter, $religionFilter, $ageFilter) {
             return $this->executeDepartmentStudentsQuery(
-                $departmentId, $termYearId, $studentStatus, $search, 
+                $departmentId, $termYearId, $studentStatus, $search,
                 $page, $perPage, $genderFilter, $religionFilter, $ageFilter
             );
         });
     }
-    
+
     /**
      * Execute department students query
      */
     private function executeDepartmentStudentsQuery(
-        $departmentId, $termYearId, $studentStatus, $search, 
+        $departmentId, $termYearId, $studentStatus, $search,
         $page, $perPage, $genderFilter = null, $religionFilter = null, $ageFilter = null
     )
     {
         $query = DB::table('acd_student')
             ->leftJoin('mstr_religion', 'acd_student.Religion_Id', '=', 'mstr_religion.Religion_Id')
             ->where('acd_student.Department_Id', $departmentId);
-            
+
         // Apply base filters
         if ($studentStatus === 'active') {
-            $currentTermId = ($termYearId === 'all' || $termYearId === null) 
-                ? $this->getCurrentActiveTermId() 
+            $currentTermId = ($termYearId === 'all' || $termYearId === null)
+                ? $this->getCurrentActiveTermId()
                 : $termYearId;
-            
+
             $query->join('acd_student_krs', 'acd_student.Student_Id', '=', 'acd_student_krs.Student_Id')
                 ->where('acd_student_krs.Term_Year_Id', $currentTermId)
                 ->where('acd_student_krs.Is_Approved', '1');
@@ -440,7 +453,7 @@ class DepartmentDetailService
             $year = substr($termYearId, 0, 4);
             $query->where('acd_student.Entry_Year_Id', 'like', $year . '%');
         }
-        
+
         // Search filter
         if ($search) {
             $query->where(function($q) use ($search) {
@@ -448,7 +461,7 @@ class DepartmentDetailService
                 ->orWhere('acd_student.Student_Id', 'like', "%{$search}%");
             });
         }
-        
+
         // Gender filter
         if ($genderFilter) {
             $genderId = null;
@@ -457,12 +470,12 @@ class DepartmentDetailService
             } elseif ($genderFilter === 'perempuan') {
                 $genderId = 2;
             }
-            
+
             if ($genderId) {
                 $query->where('acd_student.Gender_Id', $genderId);
             }
         }
-        
+
         // Religion filter
         if ($religionFilter) {
             if ($religionFilter === 'Lainnya') {
@@ -471,11 +484,11 @@ class DepartmentDetailService
                 $query->where('mstr_religion.Religion_Name', $religionFilter);
             }
         }
-        
+
         // Age filter - FIXED VERSION
         if ($ageFilter) {
             $query->whereNotNull('acd_student.Birth_Date');
-            
+
             switch ($ageFilter) {
                 case '17-19':
                     $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 17 AND 19');
@@ -494,9 +507,9 @@ class DepartmentDetailService
                     break;
             }
         }
-        
+
         $total = $query->count();
-        
+
         $students = $query->select(
                 'acd_student.Student_Id',
                 'acd_student.Full_Name',
@@ -506,30 +519,30 @@ class DepartmentDetailService
                 'acd_student.Nim',
                 'acd_student.Birth_Date', // Add Birth_Date to calculate age
                 'mstr_religion.Religion_Name',
-                DB::raw('CASE 
+                DB::raw('CASE
                     WHEN acd_student.Register_Status_Id = "A" THEN "Aktif"
                     WHEN acd_student.Register_Status_Id = "C" THEN "Cuti"
                     WHEN acd_student.Register_Status_Id = "L" THEN "Lulus"
                     WHEN acd_student.Register_Status_Id = "K" THEN "Keluar"
                     ELSE "Lainnya"
                 END as Status_Name'),
-                DB::raw('CASE 
+                DB::raw('CASE
                     WHEN acd_student.Gender_Id = 1 THEN "Laki-laki"
                     WHEN acd_student.Gender_Id = 2 THEN "Perempuan"
                     ELSE "Tidak Diketahui"
                 END as Gender_Name'),
-                DB::raw('CASE 
-                    WHEN mstr_religion.Religion_Name IS NULL THEN "Lainnya" 
-                    ELSE mstr_religion.Religion_Name 
+                DB::raw('CASE
+                    WHEN mstr_religion.Religion_Name IS NULL THEN "Lainnya"
+                    ELSE mstr_religion.Religion_Name
                 END as Religion_Display_Name'),
-                DB::raw('CASE 
-                    WHEN acd_student.Birth_Date IS NOT NULL THEN 
+                DB::raw('CASE
+                    WHEN acd_student.Birth_Date IS NOT NULL THEN
                         TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE())
                     ELSE NULL
                 END as Age'),
-                DB::raw('CASE 
+                DB::raw('CASE
                     WHEN acd_student.Birth_Date IS NOT NULL THEN
-                        CASE 
+                        CASE
                             WHEN TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 17 AND 19 THEN "17-19"
                             WHEN TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 20 AND 22 THEN "20-22"
                             WHEN TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 23 AND 25 THEN "23-25"
@@ -544,7 +557,7 @@ class DepartmentDetailService
             ->limit($perPage)
             ->orderBy('acd_student.Full_Name')
             ->get();
-            
+
         return [
             'data' => $students,
             'total' => $total,
@@ -562,13 +575,13 @@ class DepartmentDetailService
             ->where('Start_Date', '<=', now())
             ->where('End_Date', '>=', now())
             ->first();
-        
+
         if (!$currentTerm) {
             $currentTerm = DB::table('mstr_term_year')
                 ->orderBy('Term_Year_Id', 'desc')
                 ->first();
         }
-        
+
         return $currentTerm ? $currentTerm->Term_Year_Id : '20242';
     }
 
