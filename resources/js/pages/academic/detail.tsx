@@ -451,8 +451,22 @@ export default function FacultyStudentDetail() {
                         </div>
 
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                            <FacultyReligionChart religionDistribution={facultyDetail.religionDistribution} facultyName={facultyInfo.Faculty_Name} />
-                            <FacultyAgeChart ageDistribution={facultyDetail.ageDistribution} facultyName={facultyInfo.Faculty_Name} />
+                            <FacultyReligionChart
+                                religionDistribution={facultyDetail.religionDistribution}
+                                facultyName={facultyInfo.Faculty_Name}
+                                facultyId={facultyInfo.Faculty_Id} // ADD this line
+                                termYearId={termYearId} // ADD this line
+                                studentStatus={studentStatus} // ADD this line
+                                onReligionClick={handleReligionClick} // ADD this line
+                            />
+                            <FacultyAgeChart
+                                ageDistribution={facultyDetail.ageDistribution}
+                                facultyName={facultyInfo.Faculty_Name}
+                                facultyId={facultyInfo.Faculty_Id} // ADD this line
+                                termYearId={termYearId} // ADD this line
+                                studentStatus={studentStatus} // ADD this line
+                                onAgeClick={handleAgeClick} // ADD this line
+                            />
                         </div>
                     </TabsContent>
 

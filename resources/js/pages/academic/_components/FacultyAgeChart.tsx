@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip } from '@/components/ui/chart';
+import { router } from '@inertiajs/react';
 import { Bar, BarChart, CartesianGrid, Cell, XAxis, YAxis } from 'recharts';
 
 interface AgeData {
@@ -10,6 +11,10 @@ interface AgeData {
 interface FacultyAgeChartProps {
     ageDistribution: AgeData[];
     facultyName: string;
+    facultyId?: string; // ADD this prop
+    termYearId?: string; // ADD this prop
+    studentStatus?: string; // ADD this prop
+    onAgeClick?: (age: string) => void; // ADD this prop
 }
 
 const ageColors = [
@@ -27,7 +32,14 @@ const chartConfig = {
     },
 } satisfies ChartConfig;
 
-export default function FacultyAgeChart({ ageDistribution, facultyName }: FacultyAgeChartProps) {
+export default function FacultyAgeChart({
+    ageDistribution,
+    facultyName,
+    facultyId, // ADD this
+    termYearId, // ADD this
+    studentStatus, // ADD this
+    onAgeClick, // ADD this
+}: FacultyAgeChartProps) {
     const chartData = ageDistribution.map((item, index) => ({
         ...item,
         color: ageColors[index % ageColors.length],
@@ -72,15 +84,40 @@ export default function FacultyAgeChart({ ageDistribution, facultyName }: Facult
 
         return (totalAge / totalStudents).toFixed(1);
     };
+    const handleBarClick = (data: any) => {
+        if (data && data.age && facultyId) {
+            const selectedAge = data.age;
+
+            // Update URL with parameter tab and age
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', 'students');
+            url.searchParams.set('age', selectedAge);
+
+            // Navigate to the new URL
+            router.visit(url.toString(), {
+                preserveState: true,
+                replace: true,
+                onSuccess: () => {
+                    if (onAgeClick) {
+                        onAgeClick(selectedAge);
+                    }
+                },
+            });
+        }
+    };
 
     const averageAge = calculateAverageAge();
 
     return (
-        <Card>
+        <Card className="transition-shadow hover:shadow-lg">
             <CardHeader>
                 <CardTitle>Distribusi Umur</CardTitle>
-                <CardDescription>Kelompok umur mahasiswa di {facultyName}</CardDescription>
+                <CardDescription>
+                    Kelompok umur mahasiswa di {facultyName}
+                    <span className="mt-1 block text-xs text-blue-600">💡 Klik pada chart untuk melihat data mahasiswa berdasarkan umur</span>
+                </CardDescription>
             </CardHeader>
+
             <CardContent>
                 <ChartContainer config={chartConfig}>
                     <BarChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 10 }} barSize={40}>
@@ -106,9 +143,11 @@ export default function FacultyAgeChart({ ageDistribution, facultyName }: Facult
                                 return null;
                             }}
                         />
-                        <Bar dataKey="value" radius={[4, 4, 0, 0]}>
+                        <Bar dataKey="value" radius={[4, 4, 0, 0]} onClick={handleBarClick} className="cursor-pointer" style={{ cursor: 'pointer' }}>
+                            {' '}
+                            // ADD onClick, className, and style
                             {chartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                <Cell key={`cell-${index}`} fill={entry.color} className="cursor-pointer transition-opacity hover:opacity-80" /> // ADD className for hover effect
                             ))}
                         </Bar>
                     </BarChart>
@@ -119,6 +158,7 @@ export default function FacultyAgeChart({ ageDistribution, facultyName }: Facult
                     Mayoritas umur {largestAgeGroup ? largestAgeGroup.age : 'N/A'} tahun ({largestAgeGroupPercentage}%)
                 </div>
                 <div className="text-muted-foreground">Rata-rata umur mahasiswa: {averageAge} tahun</div>
+                <div className="text-xs text-blue-600 italic">Klik pada chart untuk melihat detail mahasiswa berdasarkan umur</div> // ADD this line
             </CardFooter>
         </Card>
     );

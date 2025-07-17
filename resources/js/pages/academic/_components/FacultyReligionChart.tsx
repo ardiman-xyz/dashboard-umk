@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChartConfig, ChartContainer, ChartTooltip } from '@/components/ui/chart';
+import { router } from '@inertiajs/react';
 import { Cell, Pie, PieChart, ResponsiveContainer } from 'recharts';
 
 interface ReligionData {
@@ -10,6 +11,10 @@ interface ReligionData {
 interface FacultyReligionChartProps {
     religionDistribution: ReligionData[];
     facultyName: string;
+    facultyId?: string; // ADD this prop
+    termYearId?: string; // ADD this prop
+    studentStatus?: string; // ADD this prop
+    onReligionClick?: (religion: string) => void; // ADD this prop
 }
 
 const religionColors = [
@@ -29,8 +34,14 @@ const chartConfig = {
         color: 'hsl(var(--chart-1))',
     },
 } satisfies ChartConfig;
-
-export default function FacultyReligionChart({ religionDistribution, facultyName }: FacultyReligionChartProps) {
+export default function FacultyReligionChart({
+    religionDistribution,
+    facultyName,
+    facultyId, // ADD this
+    termYearId, // ADD this
+    studentStatus, // ADD this
+    onReligionClick, // ADD this
+}: FacultyReligionChartProps) {
     const chartData = religionDistribution.map((item, index) => ({
         ...item,
         color: religionColors[index % religionColors.length],
@@ -39,6 +50,46 @@ export default function FacultyReligionChart({ religionDistribution, facultyName
     const totalStudents = religionDistribution.reduce((sum, item) => sum + item.value, 0);
     const majorityReligion = religionDistribution.length > 0 ? religionDistribution[0] : null;
     const majorityPercentage = majorityReligion && totalStudents > 0 ? ((majorityReligion.value / totalStudents) * 100).toFixed(1) : '0';
+
+    const handlePieClick = (data: any) => {
+        if (data && data.name && facultyId) {
+            const selectedReligion = data.name;
+
+            // Update URL with parameter tab and religion
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', 'students');
+            url.searchParams.set('religion', selectedReligion);
+
+            // Navigate to the new URL
+            router.visit(url.toString(), {
+                preserveState: true,
+                replace: true,
+                onSuccess: () => {
+                    if (onReligionClick) {
+                        onReligionClick(selectedReligion);
+                    }
+                },
+            });
+        }
+    };
+
+    const handleLegendClick = (religion: string) => {
+        if (facultyId) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', 'students');
+            url.searchParams.set('religion', religion);
+
+            router.visit(url.toString(), {
+                preserveState: true,
+                replace: true,
+                onSuccess: () => {
+                    if (onReligionClick) {
+                        onReligionClick(religion);
+                    }
+                },
+            });
+        }
+    };
 
     return (
         <Card>
@@ -60,6 +111,8 @@ export default function FacultyReligionChart({ religionDistribution, facultyName
                                 dataKey="value"
                                 labelLine={false}
                                 label={({ percent }) => (percent > 5 ? `${(percent * 100).toFixed(0)}%` : '')}
+                                onClick={handlePieClick} // ADD this line
+                                cursor="pointer" // ADD this line
                             >
                                 {chartData.map((entry, index) => (
                                     <Cell key={`cell-${index}`} fill={entry.color} />
@@ -77,6 +130,7 @@ export default function FacultyReligionChart({ religionDistribution, facultyName
                                                 <p className="text-sm">
                                                     {data.value.toLocaleString()} mahasiswa ({percentage}%)
                                                 </p>
+                                                <p className="mt-1 text-xs text-blue-600">Klik untuk filter data mahasiswa</p> // ADD this line
                                             </div>
                                         );
                                     }
@@ -93,7 +147,11 @@ export default function FacultyReligionChart({ religionDistribution, facultyName
                         const percentage = totalStudents > 0 ? ((item.value / totalStudents) * 100).toFixed(1) : '0';
 
                         return (
-                            <div key={item.name} className="flex items-center gap-2">
+                            <div
+                                key={item.name}
+                                className="flex cursor-pointer items-center gap-2 rounded p-2 transition-colors hover:bg-gray-50" // ADD cursor-pointer and hover styles
+                                onClick={() => handleLegendClick(item.name)} // ADD this line
+                            >
                                 <div className="h-3 w-3 flex-shrink-0 rounded-full" style={{ backgroundColor: item.color }} />
                                 <span className="truncate text-xs">
                                     {item.name} ({percentage}%)
