@@ -8,15 +8,45 @@ use Illuminate\Support\Facades\Cache;
 class FacultyDetailService
 {
     /**
+     * Enable/disable caching
+     * @var bool
+     */
+    protected $useCache = true;
+
+    /**
+     * Cache duration in seconds (default: 1 hour)
+     * @var int
+     */
+    protected $cacheDuration = 3600;
+
+    /**
+     * Set cache usage
+     */
+    public function setCacheEnabled($enabled = true)
+    {
+        $this->useCache = $enabled;
+        return $this;
+    }
+
+    /**
      * Mendapatkan informasi fakultas
      */
     public function getFacultyInfo($facultyId)
     {
-        return Cache::remember("faculty-info-{$facultyId}", 3600, function () use ($facultyId) {
-            return DB::table('mstr_faculty')
-                ->where('Faculty_Id', $facultyId)
-                ->first();
+        if (!$this->useCache) {
+            return $this->executeFacultyInfoQuery($facultyId);
+        }
+
+        return Cache::remember("faculty-info-{$facultyId}", $this->cacheDuration, function () use ($facultyId) {
+            return $this->executeFacultyInfoQuery($facultyId);
         });
+    }
+
+    private function executeFacultyInfoQuery($facultyId)
+    {
+        return DB::table('mstr_faculty')
+            ->where('Faculty_Id', $facultyId)
+            ->first();
     }
     
     /**
@@ -24,40 +54,49 @@ class FacultyDetailService
      */
     public function getFacultyDetailData($facultyId, $termYearId = null, $studentStatus = 'all')
     {
+        if (!$this->useCache) {
+            return $this->executeFacultyDetailQuery($facultyId, $termYearId, $studentStatus);
+        }
+
         $cacheKey = "faculty-detail-{$facultyId}-{$termYearId}-{$studentStatus}";
         
-        return Cache::remember($cacheKey, 3600, function () use ($facultyId, $termYearId, $studentStatus) {
-            // Statistik mahasiswa per program studi
-            $departmentStats = $this->getDepartmentStatistics($facultyId, $termYearId, $studentStatus);
-            
-            // Distribusi gender
-            $genderDistribution = $this->getGenderDistribution($facultyId, $termYearId, $studentStatus);
-            
-            // Distribusi agama
-            $religionDistribution = $this->getReligionDistribution($facultyId, $termYearId, $studentStatus);
-            
-            // Distribusi umur
-            $ageDistribution = $this->getAgeDistribution($facultyId, $termYearId, $studentStatus);
-            
-            // Distribusi asal daerah
-            $regionDistribution = $this->getRegionDistribution($facultyId, $termYearId, $studentStatus);
-            
-            // Tren mahasiswa per semester
-            $studentTrend = $this->getStudentTrend($facultyId);
-            
-            // Summary stats
-            $summaryStats = $this->getSummaryStats($facultyId, $termYearId, $studentStatus);
-            
-            return [
-                'departmentStats' => $departmentStats,
-                'genderDistribution' => $genderDistribution,
-                'religionDistribution' => $religionDistribution,
-                'ageDistribution' => $ageDistribution,
-                'regionDistribution' => $regionDistribution,
-                'studentTrend' => $studentTrend,
-                'summaryStats' => $summaryStats
-            ];
+        return Cache::remember($cacheKey, $this->cacheDuration, function () use ($facultyId, $termYearId, $studentStatus) {
+            return $this->executeFacultyDetailQuery($facultyId, $termYearId, $studentStatus);
         });
+    }
+
+    private function executeFacultyDetailQuery($facultyId, $termYearId, $studentStatus)
+    {
+        // Statistik mahasiswa per program studi
+        $departmentStats = $this->getDepartmentStatistics($facultyId, $termYearId, $studentStatus);
+        
+        // Distribusi gender
+        $genderDistribution = $this->getGenderDistribution($facultyId, $termYearId, $studentStatus);
+        
+        // Distribusi agama
+        $religionDistribution = $this->getReligionDistribution($facultyId, $termYearId, $studentStatus);
+        
+        // Distribusi umur
+        $ageDistribution = $this->getAgeDistribution($facultyId, $termYearId, $studentStatus);
+        
+        // Distribusi asal daerah
+        $regionDistribution = $this->getRegionDistribution($facultyId, $termYearId, $studentStatus);
+        
+        // Tren mahasiswa per semester
+        $studentTrend = $this->getStudentTrend($facultyId);
+        
+        // Summary stats
+        $summaryStats = $this->getSummaryStats($facultyId, $termYearId, $studentStatus);
+        
+        return [
+            'departmentStats' => $departmentStats,
+            'genderDistribution' => $genderDistribution,
+            'religionDistribution' => $religionDistribution,
+            'ageDistribution' => $ageDistribution,
+            'regionDistribution' => $regionDistribution,
+            'studentTrend' => $studentTrend,
+            'summaryStats' => $summaryStats
+        ];
     }
     
     /**
@@ -323,15 +362,34 @@ class FacultyDetailService
     }
     
     /**
-     * Mendapatkan daftar mahasiswa dengan pagination
+     * Mendapatkan daftar mahasiswa fakultas dengan pagination dan filter
      */
-    public function getFacultyStudents($facultyId, $termYearId, $studentStatus, $search, $page, $perPage)
+    public function getFacultyStudents($facultyId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter = null, $religionFilter = null, $ageFilter = null)
+    {
+        // Don't use cache for student list with filters or search
+        if (!empty($search) || $genderFilter || $religionFilter || $ageFilter) {
+            return $this->executeFacultyStudentsQuery($facultyId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter, $religionFilter, $ageFilter);
+        }
+
+        if (!$this->useCache) {
+            return $this->executeFacultyStudentsQuery($facultyId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter, $religionFilter, $ageFilter);
+        }
+
+        $cacheKey = "faculty-students-{$facultyId}-{$termYearId}-{$studentStatus}-{$page}-{$perPage}";
+        
+        return Cache::remember($cacheKey, $this->cacheDuration, function () use ($facultyId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter, $religionFilter, $ageFilter) {
+            return $this->executeFacultyStudentsQuery($facultyId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter, $religionFilter, $ageFilter);
+        });
+    }
+
+    private function executeFacultyStudentsQuery($facultyId, $termYearId, $studentStatus, $search, $page, $perPage, $genderFilter = null, $religionFilter = null, $ageFilter = null)
     {
         $query = DB::table('acd_student')
             ->join('mstr_department', 'acd_student.Department_Id', '=', 'mstr_department.Department_Id')
+            ->leftJoin('mstr_religion', 'acd_student.Religion_Id', '=', 'mstr_religion.Religion_Id')
             ->where('mstr_department.Faculty_Id', $facultyId);
             
-        // Apply filters
+        // Apply base filters
         if ($studentStatus === 'active') {
             $currentTermId = ($termYearId === 'all' || $termYearId === null) 
                 ? $this->getCurrentActiveTermId() 
@@ -348,24 +406,109 @@ class FacultyDetailService
         // Search filter
         if ($search) {
             $query->where(function($q) use ($search) {
-                $q->where('acd_student.Student_Name', 'like', "%{$search}%")
-                  ->orWhere('acd_student.Student_Id', 'like', "%{$search}%");
+                $q->where('acd_student.Full_Name', 'like', "%{$search}%")
+                  ->orWhere('acd_student.Student_Id', 'like', "%{$search}%")
+                  ->orWhere('acd_student.Nim', 'like', "%{$search}%");
             });
+        }
+
+        // Gender filter
+        if ($genderFilter) {
+            $genderId = null;
+            if ($genderFilter === 'laki') {
+                $genderId = 1;
+            } elseif ($genderFilter === 'perempuan') {
+                $genderId = 2;
+            }
+
+            if ($genderId) {
+                $query->where('acd_student.Gender_Id', $genderId);
+            }
+        }
+
+        // Religion filter
+        if ($religionFilter) {
+            if ($religionFilter === 'Lainnya') {
+                $query->whereNull('mstr_religion.Religion_Name');
+            } else {
+                $query->where('mstr_religion.Religion_Name', $religionFilter);
+            }
+        }
+
+        // Age filter
+        if ($ageFilter) {
+            $query->whereNotNull('acd_student.Birth_Date');
+
+            switch ($ageFilter) {
+                case '17-19':
+                    $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 17 AND 19');
+                    break;
+                case '20-22':
+                    $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 20 AND 22');
+                    break;
+                case '23-25':
+                    $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 23 AND 25');
+                    break;
+                case '26-30':
+                    $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 26 AND 30');
+                    break;
+                case '> 30':
+                    $query->whereRaw('TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) > 30');
+                    break;
+            }
         }
         
         $total = $query->count();
         
         $students = $query->select(
                 'acd_student.Student_Id',
-                'acd_student.Student_Name',
+                'acd_student.Full_Name',
                 'acd_student.Entry_Year_Id',
                 'acd_student.Register_Status_Id',
+                'acd_student.Gender_Id',
+                'acd_student.Nim',
+                'acd_student.Birth_Date',
+                'mstr_religion.Religion_Name',
                 'mstr_department.Department_Name',
-                'mstr_department.Department_Acronym'
+                'mstr_department.Department_Acronym',
+                'mstr_department.Department_Id',
+                DB::raw('CASE
+                    WHEN acd_student.Register_Status_Id = "A" THEN "Aktif"
+                    WHEN acd_student.Register_Status_Id = "C" THEN "Cuti"
+                    WHEN acd_student.Register_Status_Id = "L" THEN "Lulus"
+                    WHEN acd_student.Register_Status_Id = "K" THEN "Keluar"
+                    ELSE "Lainnya"
+                END as Status_Name'),
+                DB::raw('CASE
+                    WHEN acd_student.Gender_Id = 1 THEN "Laki-laki"
+                    WHEN acd_student.Gender_Id = 2 THEN "Perempuan"
+                    ELSE "Tidak Diketahui"
+                END as Gender_Name'),
+                DB::raw('CASE
+                    WHEN mstr_religion.Religion_Name IS NULL THEN "Lainnya"
+                    ELSE mstr_religion.Religion_Name
+                END as Religion_Display_Name'),
+                DB::raw('CASE
+                    WHEN acd_student.Birth_Date IS NOT NULL THEN
+                        TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE())
+                    ELSE NULL
+                END as Age'),
+                DB::raw('CASE
+                    WHEN acd_student.Birth_Date IS NOT NULL THEN
+                        CASE
+                            WHEN TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 17 AND 19 THEN "17-19"
+                            WHEN TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 20 AND 22 THEN "20-22"
+                            WHEN TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 23 AND 25 THEN "23-25"
+                            WHEN TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) BETWEEN 26 AND 30 THEN "26-30"
+                            WHEN TIMESTAMPDIFF(YEAR, acd_student.Birth_Date, CURDATE()) > 30 THEN "> 30"
+                            ELSE "Tidak Diketahui"
+                        END
+                    ELSE "Tidak Diketahui"
+                END as Age_Range')
             )
             ->offset(($page - 1) * $perPage)
             ->limit($perPage)
-            ->orderBy('acd_student.Student_Name')
+            ->orderBy('acd_student.Full_Name')
             ->get();
             
         return [

@@ -12,6 +12,9 @@ interface GenderDistribution {
 interface FacultyGenderChartProps {
     genderDistribution: GenderDistribution;
     facultyName: string;
+    facultyId?: string; // Add facultyId prop
+    termYearId?: string; // Add termYearId prop
+    studentStatus?: string; // Add studentStatus prop
     onGenderClick?: (gender: 'laki' | 'perempuan') => void;
 }
 
@@ -26,7 +29,14 @@ const chartConfig = {
     },
 } satisfies ChartConfig;
 
-export default function FacultyGenderChart({ genderDistribution, facultyName, onGenderClick }: FacultyGenderChartProps) {
+export default function FacultyGenderChart({
+    genderDistribution,
+    facultyName,
+    facultyId,
+    termYearId,
+    studentStatus,
+    onGenderClick,
+}: FacultyGenderChartProps) {
     // Convert string to number jika diperlukan
     const laki = typeof genderDistribution?.laki === 'string' ? parseInt(genderDistribution.laki) : genderDistribution?.laki || 0;
     const perempuan = typeof genderDistribution?.perempuan === 'string' ? parseInt(genderDistribution.perempuan) : genderDistribution?.perempuan || 0;
@@ -37,12 +47,14 @@ export default function FacultyGenderChart({ genderDistribution, facultyName, on
 
     // Handle pie click dengan navigation ke URL
     const handlePieClick = (data: any) => {
-        if (data) {
+        if (data && facultyId) {
             const gender = data.name === 'Laki-laki' ? 'laki' : 'perempuan';
+
             // Update URL dengan parameter tab dan gender
             const url = new URL(window.location.href);
             url.searchParams.set('tab', 'students');
             url.searchParams.set('gender', gender);
+
             // Navigate to the new URL
             router.visit(url.toString(), {
                 preserveState: true,
@@ -58,18 +70,21 @@ export default function FacultyGenderChart({ genderDistribution, facultyName, on
 
     // Handle legend click dengan navigation
     const handleLegendClick = (gender: 'laki' | 'perempuan') => {
-        const url = new URL(window.location.href);
-        url.searchParams.set('tab', 'students');
-        url.searchParams.set('gender', gender);
-        router.visit(url.toString(), {
-            preserveState: true,
-            replace: true,
-            onSuccess: () => {
-                if (onGenderClick) {
-                    onGenderClick(gender);
-                }
-            },
-        });
+        if (facultyId) {
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', 'students');
+            url.searchParams.set('gender', gender);
+
+            router.visit(url.toString(), {
+                preserveState: true,
+                replace: true,
+                onSuccess: () => {
+                    if (onGenderClick) {
+                        onGenderClick(gender);
+                    }
+                },
+            });
+        }
     };
 
     if (!hasValidData) {
@@ -165,6 +180,7 @@ export default function FacultyGenderChart({ genderDistribution, facultyName, on
                     {chartData.map((item) => {
                         const percentage = total > 0 ? ((item.value / total) * 100).toFixed(1) : '0';
                         const gender = item.name === 'Laki-laki' ? 'laki' : 'perempuan';
+
                         return (
                             <div
                                 key={item.name}

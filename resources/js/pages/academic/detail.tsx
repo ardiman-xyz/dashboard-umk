@@ -7,7 +7,7 @@ import AppLayout from '@/layouts/app-layout';
 import { type BreadcrumbItem } from '@/types';
 import { Head, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, BookOpen, Filter, MapPin, TrendingUp, Users } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import FacultyAgeChart from './_components/FacultyAgeChart';
 import FacultyDepartmentChart from './_components/FacultyDepartmentChart';
 import FacultyGenderChart from './_components/FacultyGenderChart';
@@ -94,6 +94,18 @@ export default function FacultyStudentDetail() {
     const [selectedStatus, setSelectedStatus] = useState(studentStatus);
     const [isFiltering, setIsFiltering] = useState(false);
 
+    // Get initial values from URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialTab = urlParams.get('tab') || 'overview';
+    const initialGenderFilter = urlParams.get('gender') || '';
+    const initialReligionFilter = urlParams.get('religion') || '';
+    const initialAgeFilter = urlParams.get('age') || '';
+
+    const [activeTab, setActiveTab] = useState(initialTab);
+    const [genderFilter, setGenderFilter] = useState<string>(initialGenderFilter);
+    const [religionFilter, setReligionFilter] = useState<string>(initialReligionFilter);
+    const [ageFilter, setAgeFilter] = useState<string>(initialAgeFilter);
+
     const breadcrumbs: BreadcrumbItem[] = [
         { title: 'Dashboard', href: '/dashboard' },
         { title: 'Akademik', href: '/academic' },
@@ -122,18 +134,137 @@ export default function FacultyStudentDetail() {
 
     const handleFilterApply = () => {
         setIsFiltering(true);
-        router.visit(
-            route('academic.faculty.detail', {
-                facultyId: facultyInfo.Faculty_Id,
-                term_year_id: selectedTerm,
-                student_status: selectedStatus,
-            }),
-            {
-                preserveState: true,
-                onFinish: () => setIsFiltering(false),
-            },
-        );
+
+        // Preserve current URL parameters
+        const currentParams = new URLSearchParams(window.location.search);
+        const queryParams: any = {
+            facultyId: facultyInfo.Faculty_Id,
+            term_year_id: selectedTerm,
+            student_status: selectedStatus,
+        };
+
+        // Add current URL params to preserve tab, gender, religion, and age filter
+        if (currentParams.get('tab')) {
+            queryParams.tab = currentParams.get('tab');
+        }
+        if (currentParams.get('gender')) {
+            queryParams.gender = currentParams.get('gender');
+        }
+        if (currentParams.get('religion')) {
+            queryParams.religion = currentParams.get('religion');
+        }
+        if (currentParams.get('age')) {
+            queryParams.age = currentParams.get('age');
+        }
+
+        router.visit(route('academic.faculty.detail', queryParams), {
+            preserveState: true,
+            onFinish: () => setIsFiltering(false),
+        });
     };
+
+    const updateURL = (tab: string, gender?: string, religion?: string, age?: string) => {
+        const url = new URL(window.location.href);
+
+        // Update tab parameter
+        if (tab !== 'overview') {
+            url.searchParams.set('tab', tab);
+        } else {
+            url.searchParams.delete('tab');
+        }
+
+        // Update gender parameter
+        if (gender && gender !== '') {
+            url.searchParams.set('gender', gender);
+        } else {
+            url.searchParams.delete('gender');
+        }
+
+        // Update religion parameter
+        if (religion && religion !== '') {
+            url.searchParams.set('religion', religion);
+        } else {
+            url.searchParams.delete('religion');
+        }
+
+        // Update age parameter
+        if (age && age !== '') {
+            url.searchParams.set('age', age);
+        } else {
+            url.searchParams.delete('age');
+        }
+
+        // Update URL without page reload
+        window.history.replaceState({}, '', url.toString());
+    };
+
+    const handleTabChange = (tab: string, genderFilterParam?: string, religionFilterParam?: string, ageFilterParam?: string) => {
+        setActiveTab(tab);
+
+        let newGenderFilter = genderFilter;
+        let newReligionFilter = religionFilter;
+        let newAgeFilter = ageFilter;
+
+        if (genderFilterParam) {
+            newGenderFilter = genderFilterParam;
+            setGenderFilter(genderFilterParam);
+        } else if (tab !== 'students') {
+            newGenderFilter = '';
+            setGenderFilter('');
+        }
+
+        if (religionFilterParam) {
+            newReligionFilter = religionFilterParam;
+            setReligionFilter(religionFilterParam);
+        } else if (tab !== 'students') {
+            newReligionFilter = '';
+            setReligionFilter('');
+        }
+
+        if (ageFilterParam) {
+            newAgeFilter = ageFilterParam;
+            setAgeFilter(ageFilterParam);
+        } else if (tab !== 'students') {
+            newAgeFilter = '';
+            setAgeFilter('');
+        }
+
+        updateURL(tab, newGenderFilter, newReligionFilter, newAgeFilter);
+    };
+
+    const handleGenderClick = (gender: 'laki' | 'perempuan') => {
+        // Switch to students tab and set gender filter when gender is clicked
+        handleTabChange('students', gender);
+    };
+
+    const handleReligionClick = (religion: string) => {
+        // Switch to students tab and set religion filter when religion is clicked
+        handleTabChange('students', undefined, religion);
+    };
+
+    const handleAgeClick = (age: string) => {
+        // Switch to students tab and set age filter when age is clicked
+        handleTabChange('students', undefined, undefined, age);
+    };
+
+    // Handle browser back/forward navigation
+    useEffect(() => {
+        const handlePopState = () => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const tabFromUrl = urlParams.get('tab') || 'overview';
+            const genderFromUrl = urlParams.get('gender') || '';
+            const religionFromUrl = urlParams.get('religion') || '';
+            const ageFromUrl = urlParams.get('age') || '';
+
+            setActiveTab(tabFromUrl);
+            setGenderFilter(genderFromUrl);
+            setReligionFilter(religionFromUrl);
+            setAgeFilter(ageFromUrl);
+        };
+
+        window.addEventListener('popstate', handlePopState);
+        return () => window.removeEventListener('popstate', handlePopState);
+    }, []);
 
     const formatNumber = (num: number | null | undefined): string => {
         if (num === null || num === undefined || isNaN(num)) {
@@ -297,7 +428,7 @@ export default function FacultyStudentDetail() {
                 </div>
 
                 {/* Main Content Tabs */}
-                <Tabs defaultValue="overview" className="w-full">
+                <Tabs value={activeTab} onValueChange={(tab) => handleTabChange(tab)} className="w-full">
                     <TabsList className="grid w-full grid-cols-4">
                         <TabsTrigger value="overview">Overview</TabsTrigger>
                         <TabsTrigger value="demographics">Demografi</TabsTrigger>
@@ -309,7 +440,14 @@ export default function FacultyStudentDetail() {
                     <TabsContent value="overview" className="space-y-6">
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                             <FacultyDepartmentChart departmentStats={facultyDetail.departmentStats} facultyName={facultyInfo.Faculty_Name} />
-                            <FacultyGenderChart genderDistribution={facultyDetail.genderDistribution} facultyName={facultyInfo.Faculty_Name} />
+                            <FacultyGenderChart
+                                genderDistribution={facultyDetail.genderDistribution}
+                                facultyName={facultyInfo.Faculty_Name}
+                                facultyId={facultyInfo.Faculty_Id}
+                                termYearId={termYearId}
+                                studentStatus={studentStatus}
+                                onGenderClick={handleGenderClick}
+                            />
                         </div>
 
                         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
@@ -421,7 +559,14 @@ export default function FacultyStudentDetail() {
 
                     {/* Students Data Tab */}
                     <TabsContent value="students" className="space-y-6">
-                        <FacultyStudentsTable facultyId={facultyInfo.Faculty_Id} termYearId={termYearId} studentStatus={studentStatus} />
+                        <FacultyStudentsTable
+                            facultyId={facultyInfo.Faculty_Id}
+                            termYearId={termYearId}
+                            studentStatus={studentStatus}
+                            initialGenderFilter={genderFilter}
+                            initialReligionFilter={religionFilter}
+                            initialAgeFilter={ageFilter}
+                        />
                     </TabsContent>
                 </Tabs>
             </div>

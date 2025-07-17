@@ -320,4 +320,55 @@ class AcademicDataController extends Controller
         ]);
     }
 
+    public function facultyStudents(Request $request, $facultyId)
+    {
+        $termYearId = $request->input('term_year_id', 'all');
+        $studentStatus = $request->input('student_status', 'all');
+        $search = $request->input('search', '');
+        $page = $request->input('page', 1);
+        $perPage = $request->input('per_page', 20);
+        
+        // Get filters from request
+        $genderFilter = $request->input('gender', null);
+        $religionFilter = $request->input('religion', null);
+        $ageFilter = $request->input('age', null);
+        $useCache = $request->input('use_cache', true);
+        
+        // Set cache usage
+        $this->facultyDetailService->setCacheEnabled($useCache);
+        
+        try {
+            $students = $this->facultyDetailService->getFacultyStudents(
+                $facultyId,
+                $termYearId,
+                $studentStatus,
+                $search,
+                $page,
+                $perPage,
+                $genderFilter,
+                $religionFilter,
+                $ageFilter
+            );
+            
+            return response()->json([
+                'students' => $students,
+                'filters' => [
+                    'term_year_id' => $termYearId,
+                    'student_status' => $studentStatus,
+                    'search' => $search,
+                    'gender_filter' => $genderFilter,
+                    'religion_filter' => $religionFilter,
+                    'age_filter' => $ageFilter
+                ]
+            ]);
+        } catch (\Exception $e) {
+          
+            
+            return response()->json([
+                'error' => 'Failed to fetch students data',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+    }
+
 }
